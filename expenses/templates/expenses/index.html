@@ -1,0 +1,128 @@
+{% extends "expenses/base.html" %}
+{% load static %}
+
+{% block title %}씀 / SSEUM - 개인 지출 관리{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-copy-wrap">
+        <p class="eyebrow">PERSONAL EXPENSE TRACKING SERVICE</p>
+        <h1>기록이 습관이 되는,<br>나의 지출 관리</h1>
+        <p class="hero-copy">씀 / SSEUM에서 지출을 기록하고 필요한 흐름만 가볍게 확인해요.</p>
+    </div>
+
+    <div class="hero-brand-card" aria-hidden="true">
+        <img src="{% static 'expenses/images/logo-sseum-symbol.png' %}" alt="" class="hero-brand-symbol">
+    </div>
+</section>
+
+<section class="filter-dock" aria-label="지출 필터">
+    <form id="filterForm" method="get">
+        <input type="hidden" name="date_from" id="dateFrom" value="{{ date_from }}">
+        <input type="hidden" name="date_to" id="dateTo" value="{{ date_to }}">
+        <input type="hidden" name="period" id="periodValue" value="{{ period }}">
+
+        <div class="filter-topline">
+            <div class="filter-actions">
+                <button class="filter-button" type="button" id="toggleCategoryPanel">
+                    <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 6h16M7 12h10M10 18h4" />
+                    </svg>
+                    <span>필터</span>
+                    <span class="filter-count" id="activeFilterCount">0</span>
+                </button>
+
+                <button class="date-button" type="button" id="openCalendar">
+                    <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="3.5" y="5" width="17" height="15" rx="3"></rect>
+                        <path d="M8 3.5V7M16 3.5V7M3.5 9.5h17"></path>
+                    </svg>
+                    <span id="dateRangeLabel">전체 기간</span>
+                </button>
+
+                <button
+                    class="icon-button reset-button"
+                    type="button"
+                    id="resetFilters"
+                    aria-label="필터 초기화"
+                    title="필터 초기화"
+                    {% if not selected_categories and not date_from and not date_to %}hidden{% endif %}
+                >
+                    <svg class="ui-icon reset-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5.5 7.5A8 8 0 1 1 4 14"></path>
+                        <path d="M4.5 4.5v4h4"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="quick-periods" aria-label="빠른 기간 선택">
+                <button type="button" class="quick-period" data-period="month">이번 달</button>
+                <button type="button" class="quick-period" data-period="3m">최근 3개월</button>
+                <button type="button" class="quick-period" data-period="6m">최근 6개월</button>
+                <button type="button" class="quick-period" data-period="all">전체</button>
+            </div>
+        </div>
+
+        <div class="category-panel" id="categoryPanel" hidden>
+            <div class="category-panel-head">
+                <strong>카테고리</strong>
+                <button type="button" class="text-button" id="selectAllCategories">전체 선택</button>
+            </div>
+
+            <div class="category-options">
+                {% for category in categories %}
+                    <label class="category-choice">
+                        <input
+                            type="checkbox"
+                            name="category"
+                            value="{{ category }}"
+                            {% if category in selected_categories %}checked{% endif %}
+                        >
+                        <span>{{ category }}</span>
+                    </label>
+                {% empty %}
+                    <p class="muted">등록된 카테고리가 없어요.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="active-chips" id="activeChips" aria-live="polite"></div>
+    </form>
+</section>
+
+<div id="resultsArea">
+    {% include "expenses/_results.html" %}
+</div>
+
+<div class="calendar-popover" id="calendarPopover" hidden>
+    <div class="calendar-card" role="dialog" aria-label="기간 선택">
+        <div class="calendar-head">
+            <button type="button" class="calendar-nav" id="prevMonth" aria-label="이전 달">‹</button>
+            <strong id="calendarTitle"></strong>
+            <button type="button" class="calendar-nav" id="nextMonth" aria-label="다음 달">›</button>
+        </div>
+
+        <div class="calendar-weekdays">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+
+        <div class="calendar-selection">
+            <div>
+                <span>시작일</span>
+                <strong id="calendarStartLabel">선택 안 함</strong>
+            </div>
+            <span class="range-arrow">→</span>
+            <div>
+                <span>종료일</span>
+                <strong id="calendarEndLabel">선택 안 함</strong>
+            </div>
+        </div>
+
+        <div class="calendar-footer">
+            <button type="button" class="secondary-button" id="clearCalendar">기간 해제</button>
+            <button type="button" class="primary-button" id="applyCalendar">적용</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

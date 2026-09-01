@@ -1,0 +1,125 @@
+<section class="summary-grid" id="summaryArea">
+    <article class="summary-card">
+        <span class="summary-label">전체 지출</span>
+        <strong class="summary-value">{{ stats.total|floatformat:"0g" }}원</strong>
+    </article>
+
+    <article class="summary-card">
+        <span class="summary-label">지출 건수</span>
+        <strong class="summary-value">{{ stats.count }}건</strong>
+    </article>
+
+    <article class="summary-card summary-card-largest">
+        <span class="summary-label">가장 큰 지출</span>
+        {% if stats.largest %}
+            <div class="largest-badges">
+                <span class="mini-badge category-badge" data-category-chip="{{ stats.largest.category }}">
+                    {{ stats.largest.category }}
+                </span>
+                <span class="mini-badge description-badge">{{ stats.largest.description }}</span>
+            </div>
+            <strong class="summary-value largest-value">{{ stats.largest.amount|floatformat:"0g" }}원</strong>
+        {% else %}
+            <div class="largest-badges">
+                <span class="mini-badge description-badge">등록된 지출 없음</span>
+            </div>
+            <strong class="summary-value">0원</strong>
+        {% endif %}
+    </article>
+</section>
+
+<section class="content-grid" id="contentArea">
+    <article class="panel">
+        <div class="section-heading expense-heading">
+            <div>
+                <p class="eyebrow">EXPENSES</p>
+                <h2>지출 내역</h2>
+            </div>
+            <span class="result-count">{{ stats.count }}건</span>
+        </div>
+
+        {% if expenses %}
+            <div class="expense-list">
+                {% for expense in expenses %}
+                    <article class="expense-row">
+                        <div class="expense-main">
+                            <div class="expense-meta">
+                                <span class="category-chip" data-category-chip="{{ expense.category }}">
+                                    {{ expense.category }}
+                                </span>
+                                <span>{{ expense.date|date:"Y-m-d" }}</span>
+                            </div>
+                            <strong class="expense-description">{{ expense.description }}</strong>
+                        </div>
+
+                        <div class="expense-side">
+                            <strong class="expense-amount">{{ expense.amount|floatformat:"0g" }}원</strong>
+                            <div class="row-actions">
+                                <a class="ghost-button" href="{% url 'expense_update' expense.pk %}">수정</a>
+                                <form action="{% url 'expense_delete' expense.pk %}" method="post" data-delete-form>
+                                    {% csrf_token %}
+                                    <button class="danger-button" type="submit">삭제</button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <img class="empty-state-logo" src="/static/expenses/images/logo-sseum-symbol.png" alt="" aria-hidden="true">
+                <strong>조건에 맞는 지출이 없어요.</strong>
+                <p>필터를 바꾸거나 새로운 지출을 추가해 보세요.</p>
+            </div>
+        {% endif %}
+    </article>
+
+    <aside class="side-stack">
+        <article class="panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">CATEGORY</p>
+                    <h2>카테고리별 합계</h2>
+                </div>
+            </div>
+
+            {% if stats.category_totals %}
+                <div class="bar-list">
+                    {% for category, amount in stats.category_totals.items %}
+                        <div class="bar-item" data-bar-category="{{ category }}" data-bar-amount="{{ amount }}">
+                            <div class="bar-top">
+                                <span>{{ category }}</span>
+                                <strong>{{ amount|floatformat:"0g" }}원</strong>
+                            </div>
+                            <div class="bar-track"><div class="bar-fill"></div></div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="muted">표시할 데이터가 없어요.</p>
+            {% endif %}
+        </article>
+
+        <article class="panel">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">MONTHLY</p>
+                    <h2>월별 합계</h2>
+                </div>
+            </div>
+
+            {% if stats.monthly_totals %}
+                <div class="monthly-list">
+                    {% for month, amount in stats.monthly_totals.items %}
+                        <div class="monthly-row">
+                            <span>{{ month }}</span>
+                            <strong>{{ amount|floatformat:"0g" }}원</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="muted">표시할 데이터가 없어요.</p>
+            {% endif %}
+        </article>
+    </aside>
+</section>

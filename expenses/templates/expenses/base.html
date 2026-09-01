@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}씀 / SSEUM{% endblock %}</title>
+
+    <link rel="icon" type="image/png" href="{% static 'expenses/images/favicon-sseum.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'expenses/images/favicon-sseum.png' %}">
+
+    <link rel="stylesheet" href="{% static 'expenses/css/style.css' %}">
+    <script src="{% static 'expenses/js/main.js' %}" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <div class="page-shell header-inner">
+            <a class="brand" href="{% url 'expense_list' %}" aria-label="씀 SSEUM 홈">
+                <img class="brand-logo" src="{% static 'expenses/images/logo-sseum-horizontal.png' %}" alt="씀 SSEUM">
+            </a>
+
+            <a class="primary-button compact" href="{% url 'expense_create' %}">
+                + 지출 추가
+            </a>
+        </div>
+    </header>
+
+    <main class="page-shell main-content">
+        {% if messages %}
+            <div class="flash-stack">
+                {% for message in messages %}
+                    <div class="flash {% if message.tags %}{{ message.tags }}{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

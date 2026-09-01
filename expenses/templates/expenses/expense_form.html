@@ -1,0 +1,104 @@
+{% extends "expenses/base.html" %}
+{% load static %}
+
+{% block title %}
+    {% if is_edit %}지출 수정{% else %}지출 추가{% endif %} - 씀 / SSEUM
+{% endblock %}
+
+{% block content %}
+<section class="form-page">
+    <div class="form-heading form-heading-brand">
+        <div>
+            <p class="eyebrow">{% if is_edit %}UPDATE{% else %}CREATE{% endif %}</p>
+            <h1>{% if is_edit %}지출 수정{% else %}새 지출 추가{% endif %}</h1>
+            <p>
+                {% if is_edit %}
+                    저장된 지출 내용을 수정할 수 있어요.
+                {% else %}
+                    날짜, 카테고리, 내용과 금액을 입력해 주세요.
+                {% endif %}
+            </p>
+        </div>
+        <img src="{% static 'expenses/images/logo-sseum-symbol.png' %}" alt="" class="form-brand-symbol" aria-hidden="true">
+    </div>
+
+    <form class="panel expense-form" method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="form-error-box">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="form-grid">
+            <div class="field-group">
+                <label class="field-label" for="formDateTrigger">날짜</label>
+                {{ form.date }}
+                <button
+                    type="button"
+                    class="form-date-trigger"
+                    id="formDateTrigger"
+                    data-form-date-trigger
+                    aria-haspopup="dialog"
+                >
+                    <span id="formDateText">
+                        {% if form.date.value %}{{ form.date.value }}{% else %}연도-월-일{% endif %}
+                    </span>
+                    <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="3.5" y="5" width="17" height="15" rx="3"></rect>
+                        <path d="M8 3.5V7M16 3.5V7M3.5 9.5h17"></path>
+                    </svg>
+                </button>
+                {% for error in form.date.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="{{ form.category.id_for_label }}">카테고리</label>
+                {{ form.category }}
+                {% for error in form.category.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+
+            <div class="field-group full">
+                <label class="field-label" for="{{ form.description.id_for_label }}">내용</label>
+                {{ form.description }}
+                {% for error in form.description.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+
+            <div class="field-group full">
+                <label class="field-label" for="{{ form.amount.id_for_label }}">금액</label>
+                <div class="amount-input-wrap">
+                    {{ form.amount }}
+                    <span>원</span>
+                </div>
+                {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a class="secondary-button" href="{% url 'expense_list' %}">취소</a>
+            <button class="primary-button" type="submit">
+                {% if is_edit %}수정 저장{% else %}지출 등록{% endif %}
+            </button>
+        </div>
+    </form>
+</section>
+
+<div class="calendar-popover" id="formCalendarPopover" hidden>
+    <div class="calendar-card" role="dialog" aria-label="날짜 선택">
+        <div class="calendar-head">
+            <button type="button" class="calendar-nav" id="formPrevMonth" aria-label="이전 달">‹</button>
+            <strong id="formCalendarTitle"></strong>
+            <button type="button" class="calendar-nav" id="formNextMonth" aria-label="다음 달">›</button>
+        </div>
+
+        <div class="calendar-weekdays">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="calendar-grid" id="formCalendarGrid"></div>
+
+        <div class="calendar-footer">
+            <button type="button" class="secondary-button" id="formCalendarToday">오늘</button>
+            <button type="button" class="primary-button" id="formCalendarClose">확인</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
