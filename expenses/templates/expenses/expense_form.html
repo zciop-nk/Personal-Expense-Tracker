@@ -52,9 +52,79 @@
             </div>
 
             <div class="field-group">
-                <label class="field-label" for="{{ form.category.id_for_label }}">카테고리</label>
+                <label class="field-label" for="categorySearch">카테고리</label>
+
                 {{ form.category }}
-                {% for error in form.category.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+
+                <div class="category-combobox" id="categoryCombobox">
+                    <div class="category-input-wrap">
+                        <input
+                            type="text"
+                            id="categorySearch"
+                            class="form-control category-search-input"
+                            placeholder="카테고리를 입력해 주세요"
+                            autocomplete="off"
+                            aria-autocomplete="list"
+                            aria-controls="categoryDropdown"
+                            aria-expanded="false"
+                        >
+
+                        <svg class="category-input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 10.5L12 14.5L16 10.5"></path>
+                        </svg>
+                    </div>
+
+                    <div
+                        class="category-dropdown"
+                        id="categoryDropdown"
+                        role="listbox"
+                        hidden
+                    >
+                        <div class="category-dropdown-label">카테고리</div>
+                        <div class="category-option-list" id="categoryOptionList">
+                            {% for category in form_categories %}
+                                <button
+                                    type="button"
+                                    class="category-option"
+                                    data-category-id="{{ category.id }}"
+                                    data-category-name="{{ category.name }}"
+                                    data-category-color="{{ category.color_key }}"
+                                    role="option"
+                                >
+                                    <span class="category-option-dot category-color-{{ category.color_key }}"></span>
+                                    <span>{{ category.name }}</span>
+                                </button>
+                            {% endfor %}
+                        </div>
+                        <button type="button" class="category-add-option" id="categoryAddOption" hidden>
+                            <span class="category-add-plus">+</span>
+                            <span id="categoryAddText"></span>
+                        </button>
+                        <div class="category-add-panel" id="categoryAddPanel" hidden>
+                            <div class="category-add-field">
+                                <label for="newCategoryName">카테고리명</label>
+                                <input type="text" id="newCategoryName" class="form-control" maxlength="30" autocomplete="off">
+                            </div>
+                            <div class="category-add-actions">
+                                <button type="button" class="secondary-button" id="cancelNewCategory"> 취소 </button>
+                                <button type="button" class="primary-button" id="saveNewCategory"> 추가 </button>
+                            </div>
+                        </div>
+                        <div id="categoryKeywordData" hidden>
+                            {% for item in category_keywords %}
+                                <span
+                                    data-keyword="{{ item.keyword }}"
+                                    data-category-id="{{ item.category.id }}"
+                                    data-category-name="{{ item.category.name }}"
+                                ></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                {% for error in form.category.errors %}
+                    <p class="field-error">{{ error }}</p>
+                {% endfor %}
             </div>
 
             <div class="field-group full">

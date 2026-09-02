@@ -4,6 +4,6 @@ from .models import Expense
 @admin.register(Expense)
 class ExpenseAdmin(admin.ModelAdmin):
     list_display = ("date", "category", "description", "amount")
-    list_filter = ("category", "date")
-    search_fields = ("category", "description")
+    list_filter = ("category", )
+    search_fields = ("category__name", "description")
     ordering = ("-date", "-id")

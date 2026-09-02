@@ -1,29 +1,83 @@
 document.addEventListener("DOMContentLoaded", () => {
     initListPage();
     initFormCalendar();
-    bindDeleteConfirm();
+    initCategoryCombobox();
 });
 
-const palette = [
-    ["#FFF2F0","#D86558","#F4B8AF"],
-    ["#F2F4FF","#5965C8","#BCC3FA"],
-    ["#EFFAF5","#3C926D","#B6E3CF"],
-    ["#FFF7E8","#B46F1F","#F2D3A5"],
-    ["#F7F1FF","#7F52AB","#D8C1F1"],
-    ["#EDF8FA","#397F8B","#B9DEE5"],
-];
+function openConfirmModal({
+    title,
+    message,
+    confirmText = "확인",
+    cancelText = "취소",
+}) {
+    return new Promise((resolve) => {
+        const modal = document.querySelector("#appModal");
+        const titleElement = document.querySelector("#appModalTitle");
+        const messageElement = document.querySelector("#appModalMessage");
+        const confirmButton = document.querySelector("#appModalConfirm");
+        const cancelButton = document.querySelector("#appModalCancel");
+        const closeButton = document.querySelector("#appModalClose");
+        const backdrop = modal?.querySelector("[data-modal-close]");
 
-function hashText(text) {
-    let hash = 0;
-    for (let i = 0; i < text.length; i += 1) {
-        hash = ((hash << 5) - hash) + text.charCodeAt(i);
-        hash |= 0;
-    }
-    return Math.abs(hash);
+        if (!modal) {
+            resolve(false);
+            return;
+        }
+
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+        confirmButton.textContent = confirmText;
+        cancelButton.textContent = cancelText;
+
+        modal.hidden = false;
+        modal.setAttribute("aria-hidden", "false");
+
+        const close = (result) => {
+            modal.hidden = true;
+            modal.setAttribute("aria-hidden", "true");
+
+            confirmButton.removeEventListener("click", onConfirm);
+            cancelButton.removeEventListener("click", onCancel);
+            closeButton.removeEventListener("click", onCancel);
+            backdrop?.removeEventListener("click", onCancel);
+
+            resolve(result);
+        };
+
+        const onConfirm = () => close(true);
+        const onCancel = () => close(false);
+
+        confirmButton.addEventListener("click", onConfirm);
+        cancelButton.addEventListener("click", onCancel);
+        closeButton.addEventListener("click", onCancel);
+        backdrop?.addEventListener("click", onCancel);
+    });
 }
 
-function getPalette(text) {
-    return palette[hashText(text) % palette.length];
+const categoryPalettes = {
+    sage: ["#EFF7F2", "#4F8068", "#6F927F"],
+    soft_blue: ["#EEF3FA", "#58759A", "#6F86A3"],
+    warm_orange: ["#FFF4E8", "#A8753F", "#B38A5A"],
+    dusty_teal: ["#EEF7F7", "#4F7F7C", "#668F8B"],
+    soft_coral: ["#FFF0EE", "#B96860", "#BD786F"],
+    muted_rose: ["#FBEFF1", "#A65F69", "#A96D77"],
+    lavender: ["#F5F0FA", "#78658F", "#8A769E"],
+    slate_indigo: ["#EFF1F7", "#596782", "#68758D"],
+    mustard: ["#FFF7E5", "#937640", "#A28754"],
+    mint: ["#EEF8F4", "#568472", "#6F9989"],
+
+    dusty_pink: ["#FAF0F3", "#9B6F7C", "#AD818E"],
+    soft_olive: ["#F4F5EC", "#777B57", "#8B8F68"],
+    muted_sky: ["#EFF5F8", "#627F8D", "#7593A0"],
+    warm_taupe: ["#F7F2EE", "#806D61", "#927E71"],
+    soft_plum: ["#F5EFF5", "#806780", "#937993"],
+    dusty_cyan: ["#EEF6F6", "#5E8182", "#719395"],
+    mellow_peach: ["#FCF1E9", "#9D765D", "#AF876D"],
+    soft_lilac: ["#F5F1F8", "#7B6E8D", "#8D7FA0"],
+};
+
+function getCategoryPalette(colorKey) {
+    return categoryPalettes[colorKey] || ["#F3F3F3", "#666666", "#888888"];
 }
 
 function toIso(date) {
@@ -44,17 +98,28 @@ function bindDeleteConfirm() {
         if (deleteForm.dataset.bound === "true") return;
         deleteForm.dataset.bound = "true";
 
-        deleteForm.addEventListener("submit", (event) => {
-            if (!window.confirm("이 지출을 삭제할까요?")) {
-                event.preventDefault();
-            }
+        deleteForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const confirmed = await openConfirmModal({
+                title: "지출을 삭제할까요?",
+                message: "삭제한 지출은 다시 복구할 수 없어요.",
+                confirmText: "삭제하기",
+                cancelText: "취소",
+            });
+
+            if (!confirmed) return;
+
+            deleteForm.submit();
         });
     });
 }
 
 function decorateResults() {
     document.querySelectorAll("[data-category-chip]").forEach((chip) => {
-        const [bg, text] = getPalette(chip.dataset.categoryChip || chip.textContent.trim());
+        const colorKey = chip.dataset.colorKey;
+        const [bg, text] = getCategoryPalette(colorKey);
+
         chip.style.backgroundColor = bg;
         chip.style.color = text;
     });
@@ -66,18 +131,148 @@ function decorateResults() {
     );
 
     barItems.forEach((item) => {
-        const amount = Number(item.dataset.barAmount) || 0;
+        const amount = Number(item.dataset.barAmount || 0);
         const fill = item.querySelector(".bar-fill");
-        const category = item.dataset.barCategory || "";
-        const [, text] = getPalette(category);
+
+        const colorKey = item.dataset.colorKey;
+        const [, , solid] = getCategoryPalette(colorKey);
 
         if (fill) {
-            fill.style.width = maxAmount ? `${(amount / maxAmount) * 100}%` : "0%";
-            fill.style.backgroundColor = text;
+            fill.style.width = `${maxAmount ? (amount / maxAmount) * 100 : 0}%`;
+            fill.style.backgroundColor = solid;
         }
     });
 
     bindDeleteConfirm();
+
+    renderCategoryDonut();
+    renderTrendChart();
+}
+
+function renderCategoryDonut() {
+    const donut = document.querySelector("#categoryDonut");
+
+    const segments = [
+        ...document.querySelectorAll("[data-donut-segment]")
+    ];
+
+    if (!donut || !segments.length) return;
+
+    let currentDegree = 0;
+
+    const gradients = segments.map((segment) => {
+        const percentage = Number(
+            segment.dataset.percentage || 0
+        );
+
+        const colorKey = segment.dataset.colorKey;
+
+        const [, , solid] = getCategoryPalette(colorKey);
+
+        const start = currentDegree;
+
+        const end =
+            currentDegree +
+            (percentage / 100) * 360;
+
+        currentDegree = end;
+
+        const dot = segment.querySelector(".donut-dot");
+
+        if (dot) {
+            dot.style.backgroundColor = solid;
+        }
+
+        return `${solid} ${start}deg ${end}deg`;
+    });
+
+    donut.style.background =
+        `conic-gradient(${gradients.join(", ")})`;
+}
+
+function renderTrendChart() {
+    const chart = document.querySelector("#trendChart");
+    const scale = document.querySelector("#trendScale");
+    const yearLabel = document.querySelector("#trendYearLabel");
+
+    if (!chart || !scale) return;
+
+    const items = [...chart.querySelectorAll("[data-trend-month]")];
+    if (!items.length) return;
+
+    const data = items.map((item) => ({
+        monthKey: item.dataset.trendMonth,
+        amount: Number(item.dataset.trendAmount || 0),
+        item,
+    }));
+
+    const amounts = data.map((d) => d.amount);
+    const maxAmount = Math.max(...amounts, 0);
+
+    // 눈금 단위 자동 계산
+    let unit = 10000;
+    if (maxAmount <= 10000) {
+        unit = 1000;
+    } else if (maxAmount <= 50000) {
+        unit = 5000;
+    } else if (maxAmount <= 100000) {
+        unit = 10000;
+    } else {
+        unit = 50000;
+    }
+
+    const topValue = Math.max(unit, Math.ceil(maxAmount / unit) * unit);
+
+    // 연도 표시
+    const years = [...new Set(data.map((d) => d.monthKey.slice(0, 4)))];
+    if (yearLabel) {
+        if (years.length === 1) {
+            yearLabel.textContent = `${years[0]}년`;
+        } else {
+            yearLabel.textContent = `${years[0]}–${years[years.length - 1]}년`;
+        }
+    }
+
+    // 보조선 + 눈금
+    scale.innerHTML = "";
+
+    const ratios = [1, 0.75, 0.5, 0.25, 0];
+    ratios.forEach((ratio) => {
+        const value = Math.round(topValue * ratio);
+
+        const row = document.createElement("div");
+        row.className = "trend-scale-row";
+        row.style.top = `${(1 - ratio) * 100}%`;
+
+        row.innerHTML = `
+            <span class="trend-scale-label">${(value / 10000).toFixed(1)}</span>
+            <span class="trend-scale-line"></span>
+        `;
+
+        scale.appendChild(row);
+    });
+
+    // 월 표기 / 막대 높이
+    data.forEach(({ monthKey, amount, item }) => {
+        const monthEl = item.querySelector(".trend-month");
+        const bar = item.querySelector(".trend-bar");
+        const amountEl = item.querySelector(".trend-amount");
+
+        const [, month] = monthKey.split("-");
+
+        if (monthEl) {
+            monthEl.textContent = `${Number(month)}월`;
+        }
+
+        if (amountEl) {
+            amountEl.textContent = (amount / 10000).toFixed(1);
+        }
+
+        if (bar) {
+            const heightRatio = topValue ? amount / topValue : 0;
+            bar.style.height = `${heightRatio * 100}%`;
+        }
+    });
 }
 
 function initListPage() {
@@ -87,7 +282,9 @@ function initListPage() {
     const resultsArea = document.querySelector("#resultsArea");
     const categoryPanel = document.querySelector("#categoryPanel");
     const toggleCategoryPanel = document.querySelector("#toggleCategoryPanel");
-    const selectAllCategories = document.querySelector("#selectAllCategories");
+    const filterChevron = document.querySelector("#filterChevron");
+    const clearCategories = document.querySelector("#clearCategories");
+    const collapseCategoryPanel = document.querySelector("#collapseCategoryPanel");
     const resetFilters = document.querySelector("#resetFilters");
     const activeChips = document.querySelector("#activeChips");
     const activeFilterCount = document.querySelector("#activeFilterCount");
@@ -97,6 +294,7 @@ function initListPage() {
     const dateRangeLabel = document.querySelector("#dateRangeLabel");
     const quickButtons = [...document.querySelectorAll("[data-period]")];
     const categoryInputs = [...document.querySelectorAll('input[name="category"]')];
+    const dateButton = document.querySelector("#openCalendar");
 
     let activeRequest = null;
 
@@ -125,6 +323,10 @@ function initListPage() {
         } else {
             dateRangeLabel.textContent = "전체 기간";
         }
+
+        const hasCustomDate = Boolean(dateFrom.value || dateTo.value);
+
+        dateButton.classList.toggle("is-active", hasCustomDate);
     }
 
     function updateResetVisibility() {
@@ -136,15 +338,19 @@ function initListPage() {
     function renderActiveChips() {
         activeChips.innerHTML = "";
         const selected = categoryInputs.filter((input) => input.checked);
+        clearCategories.hidden = selected.length === 0;
         let count = selected.length;
 
         selected.forEach((input) => {
-            const [bg, text, border] = getPalette(input.value);
+            const colorKey = input.dataset.colorKey;
+            const [bg, text] = getCategoryPalette(colorKey);
+
             const chip = document.createElement("span");
             chip.className = "filter-chip";
+
             chip.style.backgroundColor = bg;
             chip.style.color = text;
-            chip.style.borderColor = border;
+            chip.style.borderColor = bg;
             chip.innerHTML = `<span>${input.value}</span><button type="button" aria-label="${input.value} 필터 제거">×</button>`;
             chip.querySelector("button").addEventListener("click", () => {
                 input.checked = false;
@@ -170,14 +376,8 @@ function initListPage() {
             activeChips.appendChild(chip);
         }
 
-        if (count === 0) {
-            const all = document.createElement("span");
-            all.className = "filter-chip all-chip";
-            all.textContent = "전체";
-            activeChips.appendChild(all);
-        }
-
         activeFilterCount.textContent = String(count);
+        activeFilterCount.hidden = count === 0;
         updateResetVisibility();
     }
 
@@ -216,11 +416,26 @@ function initListPage() {
     }
 
     toggleCategoryPanel?.addEventListener("click", () => {
-        categoryPanel.hidden = !categoryPanel.hidden;
+    categoryPanel.hidden = !categoryPanel.hidden;
+
+    const isOpen = !categoryPanel.hidden;
+
+    toggleCategoryPanel.classList.toggle("is-open", isOpen);
+    filterChevron?.classList.toggle("is-open", isOpen);
     });
 
-    selectAllCategories?.addEventListener("click", () => {
-        categoryInputs.forEach((input) => { input.checked = false; });
+    collapseCategoryPanel?.addEventListener("click", () => {
+        categoryPanel.hidden = true;
+
+        toggleCategoryPanel.classList.remove("is-open");
+        filterChevron?.classList.remove("is-open");
+    });
+
+    clearCategories?.addEventListener("click", () => {
+        categoryInputs.forEach((input) => {
+            input.checked = false;
+        });
+
         applyFilters();
     });
 
@@ -494,4 +709,202 @@ function initFormCalendar() {
     });
 
     syncText();
+}
+
+function initCategoryCombobox() {
+    const combobox = document.querySelector("#categoryCombobox");
+    const searchInput = document.querySelector("#categorySearch");
+    const dropdown = document.querySelector("#categoryDropdown");
+    const hiddenInput = document.querySelector("#id_category");
+    const options = [...document.querySelectorAll(".category-option")];
+    const keywordItems = [...document.querySelectorAll("#categoryKeywordData [data-keyword]")];
+
+    const addOption = document.querySelector("#categoryAddOption");
+    const addText = document.querySelector("#categoryAddText");
+    
+    const addPanel = document.querySelector("#categoryAddPanel");
+    const newCategoryName = document.querySelector("#newCategoryName");
+    const cancelNewCategory = document.querySelector("#cancelNewCategory");
+    const saveNewCategory = document.querySelector("#saveNewCategory");
+
+    if (!combobox || !searchInput || !dropdown || !hiddenInput) return;
+
+    function openDropdown() {
+        dropdown.hidden = false;
+        searchInput.setAttribute("aria-expanded", "true");
+    }
+
+    function closeDropdown() {
+        dropdown.hidden = true;
+        searchInput.setAttribute("aria-expanded", "false");
+    }
+
+    searchInput.addEventListener("focus", openDropdown);
+    searchInput.addEventListener("click", openDropdown);
+
+    options.forEach((option) => {
+        option.addEventListener("click", () => {
+            const categoryId = option.dataset.categoryId;
+            const categoryName = option.dataset.categoryName;
+
+            hiddenInput.value = categoryId;
+            searchInput.value = categoryName;
+
+            closeDropdown();
+        });
+    });
+
+searchInput.addEventListener("input", () => {
+    const value = searchInput.value.trim();
+
+    if (addPanel) {
+        addPanel.hidden = true;
+    }
+
+    if (newCategoryName) {
+        newCategoryName.value = "";
+    }
+
+    hiddenInput.value = "";
+
+    if (!value) {
+        options.forEach((option) => {
+            option.hidden = false;
+        });
+
+        if (addOption) {
+            addOption.hidden = true;
+        }
+
+        openDropdown();
+        return;
+    }
+
+    const exactCategory = options.find(
+        (option) => option.dataset.categoryName === value
+    );
+    if (exactCategory) {
+        hiddenInput.value = exactCategory.dataset.categoryId;
+
+        options.forEach((option) => {
+            option.hidden = option !== exactCategory;
+        });
+
+        if (addOption) {
+            addOption.hidden = true;
+        }
+
+        openDropdown();
+        return;
+    }
+
+    const keywordMatch = keywordItems.find(
+        (item) => item.dataset.keyword === value
+    );
+
+    if (keywordMatch) {
+        hiddenInput.value = keywordMatch.dataset.categoryId;
+
+        options.forEach((option) => {
+            option.hidden =
+                option.dataset.categoryId !== keywordMatch.dataset.categoryId;
+        });
+
+        if (addOption) {
+            addOption.hidden = true;
+        }
+
+        openDropdown();
+        return;
+    }
+
+    options.forEach((option) => {
+        option.hidden = true;
+    });
+
+    hiddenInput.value = "";
+
+    if (addOption && addText) {
+        addText.textContent = `"${value}" 새 카테고리 추가`;
+        addOption.hidden = false;
+    }
+
+    openDropdown();
+});
+
+addOption?.addEventListener("click", () => {
+    const value = searchInput.value.trim();
+
+    if (!value || !addPanel || !newCategoryName) return;
+
+    newCategoryName.value = value;
+    addPanel.hidden = false;
+    addOption.hidden = true;
+
+    newCategoryName.focus();
+});
+
+cancelNewCategory?.addEventListener("click", () => {
+    if (!addPanel || !newCategoryName) return;
+
+    addPanel.hidden = true;
+    newCategoryName.value = "";
+
+    if (searchInput.value.trim()) {
+        addOption.hidden = false;
+    }
+});
+
+saveNewCategory?.addEventListener("click", async () => {
+    const name = newCategoryName?.value.trim();
+
+    if (!name) return;
+
+    const csrfToken = document.querySelector(
+        'input[name="csrfmiddlewaretoken"]'
+    )?.value;
+
+    saveNewCategory.disabled = true;
+
+    try {
+        const formData = new FormData();
+        formData.append("name", name);
+
+        const response = await fetch("/categories/create/", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": csrfToken,
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            console.error(data.message || "카테고리 생성에 실패했습니다.");
+            return;
+        }
+
+        const category = data.category;
+
+        hiddenInput.value = category.id;
+        searchInput.value = category.name;
+
+        addPanel.hidden = true;
+        addOption.hidden = true;
+
+        closeDropdown();
+    } catch (error) {
+        console.error(error);
+    } finally {
+        saveNewCategory.disabled = false;
+    }
+});
+
+    document.addEventListener("click", (event) => {
+        if (!combobox.contains(event.target)) {
+            closeDropdown();
+        }
+    });
 }

@@ -25,12 +25,26 @@
         <div class="filter-topline">
             <div class="filter-actions">
                 <button class="filter-button" type="button" id="toggleCategoryPanel">
-                    <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M4 6h16M7 12h10M10 18h4" />
-                    </svg>
+                    <!-- 기존 필터 아이콘 -->
+
                     <span>필터</span>
-                    <span class="filter-count" id="activeFilterCount">0</span>
+
+                    <span
+                        class="filter-count"
+                        id="activeFilterCount"
+                        hidden
+                    ></span>
+
+                    <svg
+                        class="ui-icon filter-chevron"
+                        id="filterChevron"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path d="M7 10l5 5 5-5"></path>
+                    </svg>
                 </button>
+                
 
                 <button class="date-button" type="button" id="openCalendar">
                     <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -66,26 +80,53 @@
         <div class="category-panel" id="categoryPanel" hidden>
             <div class="category-panel-head">
                 <strong>카테고리</strong>
-                <button type="button" class="text-button" id="selectAllCategories">전체 선택</button>
+
+                <button
+                    type="button"
+                    class="category-collapse-button"
+                    id="collapseCategoryPanel"
+                >
+                    <span>접기</span>
+
+                    <svg
+                        class="category-collapse-icon"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path d="M8 13.5L12 9.5L16 13.5"></path>
+                    </svg>
+                </button>
             </div>
 
             <div class="category-options">
                 {% for category in categories %}
-                    <label class="category-choice">
+                    <label
+                        class="category-choice"
+                        data-color-key="{{ category.color_key }}"
+                    >
                         <input
                             type="checkbox"
                             name="category"
-                            value="{{ category }}"
-                            {% if category in selected_categories %}checked{% endif %}
+                            value="{{ category.name }}"
+                            data-color-key="{{ category.color_key }}"
+                            {% if category.name in selected_categories %}checked{% endif %}
                         >
-                        <span>{{ category }}</span>
+                        <span class="category-choice-dot category-color-{{ category.color_key }}"></span>
+                        <span>{{ category.name }}</span>
                     </label>
                 {% empty %}
                     <p class="muted">등록된 카테고리가 없어요.</p>
                 {% endfor %}
             </div>
+            <button
+                type="button"
+                class="clear-category-button"
+                id="clearCategories"
+                hidden
+            >
+                전체 선택 해제
+            </button>
         </div>
-
         <div class="active-chips" id="activeChips" aria-live="polite"></div>
     </form>
 </section>

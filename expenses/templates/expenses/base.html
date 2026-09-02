@@ -10,6 +10,24 @@
     <link rel="apple-touch-icon" href="{% static 'expenses/images/favicon-sseum.png' %}">
 
     <link rel="stylesheet" href="{% static 'expenses/css/style.css' %}">
+    
+    <!-- 공통 모달 -->
+    <div class="app-modal" id="appModal" hidden aria-hidden="true">
+        <div class="app-modal-backdrop" data-modal-close></div>
+        <div class="app-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="appModalTitle">
+            <button type="button" class="app-modal-close" id="appModalClose" aria-label="닫기"> × </button>
+            <div class="app-modal-content">
+                <div class="app-modal-title" id="appModalTitle">
+                    확인이 필요해요
+                </div>
+                <div class="app-modal-message" id="appModalMessage"></div>
+            </div>
+            <div class="app-modal-actions">
+                <button type="button" class="app-modal-button app-modal-button-secondary" id="appModalCancel"> 취소 </button>
+                <button type="button" class="app-modal-button app-modal-button-danger" id="appModalConfirm"> 확인 </button>
+            </div>
+        </div>
+    </div>
     <script src="{% static 'expenses/js/main.js' %}" defer></script>
 </head>
 <body>

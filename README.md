@@ -57,12 +57,11 @@ Personal-Spending-Tracker-Django/
 
 ## 디자인
 제공된 Figma 디자인 시스템의 다음 요소를 참고했습니다.
-- Noto Sans KR 중심의 국문 타이포그래피
+- SUIT 중심의 국문, 영문 타이포그래피
 - Lato 계열 숫자 표현
 - Black / Grey / `#F7F7F7` 중립 배경
 - 라운드 카드와 정돈된 간격
 - 노란 포인트 컬러
-- 원본 서비스 로고는 사용하지 않음
 
 
 ## 브랜드 이미지 파일 위치

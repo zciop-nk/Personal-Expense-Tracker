@@ -13,7 +13,7 @@
         <span class="summary-label">가장 큰 지출</span>
         {% if stats.largest %}
             <div class="largest-badges">
-                <span class="mini-badge category-badge" data-category-chip="{{ stats.largest.category }}">
+                <span class="mini-badge category-badge" data-category-chip="{{ stats.largest.category }}" data-color-key="{{ stats.largest.category_color_key }}">
                     {{ stats.largest.category }}
                 </span>
                 <span class="mini-badge description-badge">{{ stats.largest.description }}</span>
@@ -37,32 +37,51 @@
             </div>
             <span class="result-count">{{ stats.count }}건</span>
         </div>
-
         {% if expenses %}
+            {% regroup expenses by date as expense_groups %}
             <div class="expense-list">
-                {% for expense in expenses %}
-                    <article class="expense-row">
-                        <div class="expense-main">
-                            <div class="expense-meta">
-                                <span class="category-chip" data-category-chip="{{ expense.category }}">
-                                    {{ expense.category }}
-                                </span>
-                                <span>{{ expense.date|date:"Y-m-d" }}</span>
-                            </div>
-                            <strong class="expense-description">{{ expense.description }}</strong>
+                {% for group in expense_groups %}
+                    <section class="expense-date-group">
+                        <div class="expense-date-heading">
+                            <span class="expense-date-main">
+                                {{ group.grouper|date:"Y.m.d" }}
+                            </span>
+                            <span class="expense-date-weekday">
+                                {{ group.grouper|date:"l" }}
+                            </span>
                         </div>
-
-                        <div class="expense-side">
-                            <strong class="expense-amount">{{ expense.amount|floatformat:"0g" }}원</strong>
-                            <div class="row-actions">
-                                <a class="ghost-button" href="{% url 'expense_update' expense.pk %}">수정</a>
-                                <form action="{% url 'expense_delete' expense.pk %}" method="post" data-delete-form>
-                                    {% csrf_token %}
-                                    <button class="danger-button" type="submit">삭제</button>
-                                </form>
-                            </div>
+                        <div class="expense-date-items">
+                            {% for expense in group.list %}
+                                <article class="expense-row">
+                                    <div class="expense-main">
+                                        <div class="expense-title-line">
+                                            <span
+                                                class="category-chip"
+                                                data-category-chip="{{ expense.category.name }}"
+                                                data-color-key="{{ expense.category.color_key }}">
+                                                {{ expense.category.name }}
+                                            </span>
+                                            <strong class="expense-description">
+                                                {{ expense.description }}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                    <div class="expense-side">
+                                        <strong class="expense-amount">
+                                            {{ expense.amount|floatformat:"0g" }}원
+                                        </strong>
+                                        <div class="row-actions">
+                                            <a class="ghost-button" href="{% url 'expense_update' expense.pk %}"> 수정 </a>
+                                            <form action="{% url 'expense_delete' expense.pk %}" method="post" data-delete-form>
+                                                {% csrf_token %}
+                                                <button class="danger-button" type="submit"> 삭제 </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </article>
+                            {% endfor %}
                         </div>
-                    </article>
+                    </section>
                 {% endfor %}
             </div>
         {% else %}
@@ -73,53 +92,78 @@
             </div>
         {% endif %}
     </article>
-
     <aside class="side-stack">
-        <article class="panel">
-            <div class="section-heading">
-                <div>
-                    <p class="eyebrow">CATEGORY</p>
-                    <h2>카테고리별 합계</h2>
+        {% if dashboard_type == "A" %}
+            <article class="panel dashboard-card">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">CATEGORY</p>
+                        <h2>카테고리 구성</h2>
+                    </div>
                 </div>
-            </div>
-
-            {% if stats.category_totals %}
-                <div class="bar-list">
-                    {% for category, amount in stats.category_totals.items %}
-                        <div class="bar-item" data-bar-category="{{ category }}" data-bar-amount="{{ amount }}">
-                            <div class="bar-top">
-                                <span>{{ category }}</span>
-                                <strong>{{ amount|floatformat:"0g" }}원</strong>
+                {% if stats.category_share %}
+                    <div class="donut-layout">
+                        <div class="donut-chart" id="categoryDonut" data-total="{{ stats.total }}" >
+                            <div class="donut-center">
+                                <span>총 지출</span>
+                                <strong>{{ stats.total|floatformat:"0g" }}원</strong>
                             </div>
-                            <div class="bar-track"><div class="bar-fill"></div></div>
                         </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p class="muted">표시할 데이터가 없어요.</p>
-            {% endif %}
-        </article>
-
-        <article class="panel">
-            <div class="section-heading">
-                <div>
-                    <p class="eyebrow">MONTHLY</p>
-                    <h2>월별 합계</h2>
-                </div>
-            </div>
-
-            {% if stats.monthly_totals %}
-                <div class="monthly-list">
-                    {% for month, amount in stats.monthly_totals.items %}
-                        <div class="monthly-row">
-                            <span>{{ month }}</span>
-                            <strong>{{ amount|floatformat:"0g" }}원</strong>
+                        <div class="donut-legend">
+                            {% for item in stats.category_share %}
+                                <div class="donut-legend-item" data-donut-segment data-percentage="{{ item.percentage }}" data-color-key="{{ item.color_key }}">
+                                    <div class="donut-legend-label">
+                                        <span class="donut-dot"></span>
+                                        <span>{{ item.name }}</span>
+                                    </div>
+                                    <div class="donut-legend-value">
+                                        <strong>{{ item.percentage }}%</strong>
+                                        <span>{{ item.amount|floatformat:"0g" }}원</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
                         </div>
-                    {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="muted">표시할 데이터가 없어요.</p>
+                {% endif %}
+            </article>
+            <article class="panel dashboard-card">
+                <div class="section-heading trend-heading">
+                    <div>
+                        <p class="eyebrow">MONTHLY</p>
+                        <h2>월별 지출 추이</h2>
+                    </div>
+                    <div class="trend-meta">
+                        <span class="trend-year" id="trendYearLabel"></span>
+                        <span class="trend-unit">단위: 만 원</span>
+                    </div>
                 </div>
-            {% else %}
-                <p class="muted">표시할 데이터가 없어요.</p>
-            {% endif %}
-        </article>
+                {% if stats.monthly_totals %}
+                    <div class="trend-chart" id="trendChart">
+                        <div class="trend-scale" id="trendScale"></div>
+                        <div class="trend-bars">
+                            {% for month, amount in stats.monthly_totals.items %}
+                                <div
+                                    class="trend-item"
+                                    data-trend-month="{{ month }}"
+                                    data-trend-amount="{{ amount }}"
+                                >
+                                    <div class="trend-bar-area">
+                                        <div class="trend-bar"></div>
+                                    </div>
+                                    <span class="trend-month"></span>
+                                    <strong class="trend-amount">{{ amount|floatformat:"0g" }}원</strong>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="muted">표시할 데이터가 없어요.</p>
+                {% endif %}
+            </article>
+        {% else %}
+            {# B / C / D는 다음 단계에서 구현 #}
+        {% endif %}
     </aside>
 </section>
