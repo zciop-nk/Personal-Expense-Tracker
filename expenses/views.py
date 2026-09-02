@@ -49,30 +49,48 @@ def _build_list_context(request):
 
     selected_count = len(selected_categories)
 
+    # 기간이 30일 이하인지 먼저 계산합니다.
+    is_short_period = False
+    period_days = None
+
+    if date_from and date_to:
+        try:
+            start_date = datetime.strptime(
+                date_from,
+                "%Y-%m-%d",
+            ).date()
+
+            end_date = datetime.strptime(
+                date_to,
+                "%Y-%m-%d",
+            ).date()
+
+            period_days = (end_date - start_date).days + 1
+
+            if 1 <= period_days <= 30:
+                is_short_period = True
+
+        except ValueError:
+            is_short_period = False
+            period_days = None
+
+
+    # 대시보드 타입 결정
     if selected_count == 2:
         dashboard_type = "D"
 
     elif selected_count == 1:
         dashboard_type = "B"
 
-    else:
-        is_short_period = False
+    elif is_short_period:
+        dashboard_type = "C"
 
-        if date_from and date_to:
-            try:
-                start_date = datetime.strptime(date_from, "%Y-%m-%d").date()
-                end_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+    selected_category = None
 
-                period_days = (end_date - start_date).days + 1
-
-                if period_days <= 30:
-                    is_short_period = True
-
-            except ValueError:
-                is_short_period = False
-
-        if is_short_period:
-            dashboard_type = "C"
+    if selected_count == 1:
+        selected_category = Category.objects.filter(
+            name=selected_categories[0]
+        ).first()
 
     stats = build_statistics(expenses)
 
@@ -83,7 +101,12 @@ def _build_list_context(request):
         "date_from": date_from,
         "date_to": date_to,
         "period": period,
+
         "dashboard_type": dashboard_type,
+        "selected_category": selected_category,
+        "is_short_period": is_short_period,
+        "period_days": period_days,
+
         "stats": stats,
     }
 

@@ -80,6 +80,84 @@ function getCategoryPalette(colorKey) {
     return categoryPalettes[colorKey] || ["#F3F3F3", "#666666", "#888888"];
 }
 
+function hexToRgb(hex) {
+    const cleanHex = hex.replace("#", "");
+
+    return {
+        r: parseInt(cleanHex.substring(0, 2), 16),
+        g: parseInt(cleanHex.substring(2, 4), 16),
+        b: parseInt(cleanHex.substring(4, 6), 16),
+    };
+}
+
+
+function mixColor(baseHex, mixHex, amount) {
+    const base = hexToRgb(baseHex);
+    const mix = hexToRgb(mixHex);
+
+    const ratio = Math.max(0, Math.min(1, amount));
+
+    const r = Math.round(
+        base.r + (mix.r - base.r) * ratio
+    );
+
+    const g = Math.round(
+        base.g + (mix.g - base.g) * ratio
+    );
+
+    const b = Math.round(
+        base.b + (mix.b - base.b) * ratio
+    );
+
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+function createToneColors(baseColor, count) {
+    if (count <= 0) return [];
+
+    if (count === 1) {
+        return [baseColor];
+    }
+
+    const colors = [];
+
+    for (let i = 0; i < count; i++) {
+
+        if (i === 0) {
+            /*
+             * 가장 큰 항목:
+             * 대표색을 아주 조금 어둡게
+             */
+            colors.push(
+                mixColor(baseColor, "#000000", 0.08)
+            );
+
+            continue;
+        }
+
+        /*
+         * 나머지는 순서대로 흰색을 섞습니다.
+         *
+         * 약 10% → 65% 사이
+         */
+        const progress =
+            i / Math.max(count - 1, 1);
+
+        const whiteRatio =
+            0.10 + (progress * 0.55);
+
+        colors.push(
+            mixColor(
+                baseColor,
+                "#FFFFFF",
+                whiteRatio
+            )
+        );
+    }
+
+    return colors;
+}
+
 function toIso(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -147,6 +225,9 @@ function decorateResults() {
 
     renderCategoryDonut();
     renderTrendChart();
+
+    renderDescriptionDonut();
+    renderSingleCategoryTrend();
 }
 
 function renderCategoryDonut() {
@@ -272,6 +353,303 @@ function renderTrendChart() {
             const heightRatio = topValue ? amount / topValue : 0;
             bar.style.height = `${heightRatio * 100}%`;
         }
+    });
+}
+
+function renderSingleCategoryTrend() {
+    const monthlyItems = [
+        ...document.querySelectorAll(
+            "[data-single-month-value]"
+        )
+    ];
+
+    if (monthlyItems.length) {
+        const maxValue = monthlyItems.reduce(
+            (max, item) => Math.max(
+                max,
+                Number(item.dataset.singleMonthValue || 0)
+            ),
+            0
+        );
+
+        monthlyItems.forEach((item) => {
+            const value = Number(
+                item.dataset.singleMonthValue || 0
+            );
+
+            const colorKey = item.dataset.colorKey;
+
+            const bar = item.querySelector(
+                ".single-monthly-bar"
+            );
+
+            const [, , solid] =
+                getCategoryPalette(colorKey);
+
+            if (!bar) return;
+
+            const percentage =
+                maxValue
+                    ? (value / maxValue) * 100
+                    : 0;
+
+            bar.style.height =
+                `${Math.max(percentage, 6)}%`;
+
+            bar.style.backgroundColor = solid;
+        });
+    }
+
+
+    const dailyItems = [
+        ...document.querySelectorAll(
+            "[data-single-trend-value]"
+        )
+    ];
+
+    if (!dailyItems.length) return;
+
+    const maxDaily = dailyItems.reduce(
+        (max, item) => Math.max(
+            max,
+            Number(item.dataset.singleTrendValue || 0)
+        ),
+        0
+    );
+
+    dailyItems.forEach((item) => {
+        const value = Number(
+            item.dataset.singleTrendValue || 0
+        );
+
+        const colorKey = item.dataset.colorKey;
+
+        const fill = item.querySelector(
+            ".single-daily-fill"
+        );
+
+        const [, , solid] =
+            getCategoryPalette(colorKey);
+
+        if (!fill) return;
+
+        fill.style.width =
+            `${maxDaily ? (value / maxDaily) * 100 : 0}%`;
+
+        fill.style.backgroundColor = solid;
+    });
+}
+
+function renderDescriptionDonut() {
+    const wrapper =
+        document.querySelector("[data-description-donut]");
+
+    if (!wrapper) return;
+
+    const donut =
+        wrapper.querySelector(".description-donut");
+
+    const legend =
+        wrapper.querySelector(".description-donut-legend");
+
+    const topName =
+        wrapper.querySelector(
+            ".description-donut-top-name"
+        );
+
+    const topPercent =
+        wrapper.querySelector(
+            ".description-donut-top-percent"
+        );
+
+    const sourceItems = [
+        ...wrapper.querySelectorAll(
+            "[data-description-segment]"
+        )
+    ];
+
+    if (
+        !donut ||
+        !legend ||
+        !sourceItems.length
+    ) {
+        return;
+    }
+
+
+    /* -------------------------
+       원본 데이터
+    ------------------------- */
+
+    let data = sourceItems
+        .map((item) => ({
+            name: item.dataset.name || "",
+            amount: Number(
+                item.dataset.amount || 0
+            ),
+        }))
+        .filter((item) => item.amount > 0)
+        .sort((a, b) => b.amount - a.amount);
+
+
+    if (!data.length) return;
+
+
+    /* -------------------------
+       상위 5개 + 그 외
+    ------------------------- */
+
+    if (data.length > 5) {
+
+        const topFive = data.slice(0, 5);
+
+        const otherAmount = data
+            .slice(5)
+            .reduce(
+                (sum, item) =>
+                    sum + item.amount,
+                0
+            );
+
+        data = [
+            ...topFive,
+            {
+                name: "그 외",
+                amount: otherAmount,
+            },
+        ];
+    }
+
+
+    const total = data.reduce(
+        (sum, item) => sum + item.amount,
+        0
+    );
+
+
+    /* -------------------------
+       대표 카테고리 색
+    ------------------------- */
+
+    const colorKey =
+        wrapper.dataset.colorKey;
+
+    const palette =
+        getCategoryPalette(colorKey);
+
+    const baseColor =
+        palette[2];
+
+    const colors =
+        createToneColors(
+            baseColor,
+            data.length
+        );
+
+
+    /* -------------------------
+       퍼센트 계산
+    ------------------------- */
+
+    data = data.map(
+        (item, index) => ({
+            ...item,
+
+            percentage:
+                total
+                    ? (item.amount / total) * 100
+                    : 0,
+
+            color: colors[index],
+        })
+    );
+
+
+    /* -------------------------
+       conic-gradient 생성
+    ------------------------- */
+
+    let currentDegree = 0;
+
+    const gradientParts =
+        data.map((item) => {
+
+            const segmentDegree =
+                item.percentage * 3.6;
+
+            const start =
+                currentDegree;
+
+            const end =
+                currentDegree + segmentDegree;
+
+            currentDegree = end;
+
+            return (
+                `${item.color} ` +
+                `${start}deg ${end}deg`
+            );
+        });
+
+    donut.style.background =
+        `conic-gradient(${gradientParts.join(",")})`;
+
+
+    /* -------------------------
+       중앙 정보
+    ------------------------- */
+
+    const largest = data[0];
+
+    if (topName) {
+        topName.textContent =
+            largest.name;
+    }
+
+    if (topPercent) {
+        topPercent.textContent =
+            `${largest.percentage.toFixed(1)}%`;
+    }
+
+
+    /* -------------------------
+       범례
+    ------------------------- */
+
+    legend.innerHTML = "";
+
+    data.forEach((item) => {
+
+        const row =
+            document.createElement("div");
+
+        row.className =
+            "description-donut-legend-item";
+
+        row.innerHTML = `
+            <div class="description-donut-legend-label">
+                <span
+                    class="description-donut-dot"
+                    style="background:${item.color}"
+                ></span>
+
+                <span class="description-donut-name">
+                    ${item.name}
+                </span>
+            </div>
+
+            <div class="description-donut-value">
+                <strong>
+                    ${item.percentage.toFixed(1)}%
+                </strong>
+
+                <span>
+                    ${item.amount.toLocaleString("ko-KR")}원
+                </span>
+            </div>
+        `;
+
+        legend.appendChild(row);
     });
 }
 

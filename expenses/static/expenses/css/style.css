@@ -1522,46 +1522,68 @@ h2{
 /* Monthly trend */
 
 .trend-heading {
+    display: flex;
+    justify-content: space-between;
     align-items: flex-start;
+    gap: 12px;
 }
 
 .trend-meta {
-    display: grid;
-    gap: 3px;
-    justify-items: end;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+
+    text-align: right;
 }
 
 .trend-year {
-    padding-top: 2px;
+    color: var(--ink);
 
-    color: var(--muted);
     font-size: 13px;
     font-weight: 700;
+    line-height: 18px;
+
     white-space: nowrap;
 }
 
-
 .trend-unit {
-    color: #A0A0A0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 5px 10px;
+
+    border: 1px solid #E7DFA8;
+    border-radius: 999px;
+
+    background: #FFF7CF;
+    color: #8D7720;
+
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 700;
+    line-height: 1;
+
+    white-space: nowrap;
 }
 
 .trend-chart {
     position: relative;
 
-    min-height: 244px;
-    margin-top: 6px;
+    min-height: 220px;
+    margin-top: 12px;
+    padding-bottom: 4px;
 }
 
-/* 금액 보조선 */
+/* 보조선/눈금 */
 
 .trend-scale {
     position: absolute;
     top: 0;
     right: 0;
-    bottom: 52px;
     left: 0;
+
+    height: 164px;
 
     pointer-events: none;
 }
@@ -1573,20 +1595,21 @@ h2{
 
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 
     transform: translateY(-50%);
 }
 
 .trend-scale-label {
-    width: 50px;
-    flex: 0 0 50px;
+    width: 34px;
+    flex: 0 0 34px;
 
     color: #A0A0A0;
 
     font-size: 10px;
     font-weight: 600;
-    text-align: right;
+    line-height: 1;
+    text-align: left;
 
     white-space: nowrap;
 }
@@ -1597,19 +1620,18 @@ h2{
     border-top: 1px dashed #E7E7E7;
 }
 
-
 /* 막대 영역 */
 
 .trend-bars {
     position: relative;
     z-index: 1;
 
-    height: 220px;
-    margin-left: 60px;
+    margin-left: 0;
+    padding-left: 42px;
 
     display: flex;
-    align-items: flex-end;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 8px;
 }
 
 .trend-item {
@@ -1618,7 +1640,7 @@ h2{
 
     display: grid;
     grid-template-rows: 164px auto auto;
-    gap: 7px;
+    gap: 6px;
 
     text-align: center;
 }
@@ -1632,7 +1654,7 @@ h2{
 }
 
 .trend-bar {
-    width: min(36px, 70%);
+    width: min(34px, 74%);
     height: 0;
 
     border-radius: 9px 9px 0 0;
@@ -1641,7 +1663,6 @@ h2{
 
     transition: height .25s ease;
 }
-
 
 /* 월 */
 
@@ -1655,16 +1676,312 @@ h2{
     white-space: nowrap;
 }
 
-
 /* 금액 */
 
 .trend-amount {
     color: var(--ink);
 
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
     line-height: 20px;
-    letter-spacing: -.02em;
+    letter-spacing: -0.02em;
 
     white-space: nowrap;
+}
+
+/* =========================
+   Dashboard - Type B
+========================= */
+
+
+/* =========================
+   내용별 지출 분석 - Donut
+========================= */
+
+.description-donut-layout {
+    display: grid;
+    gap: 22px;
+}
+
+.description-donut {
+    position: relative;
+
+    width: 178px;
+    height: 178px;
+
+    margin: 2px auto 0;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+    background: #EEEEEE;
+}
+
+.description-donut::after {
+    content: "";
+
+    position: absolute;
+
+    width: 108px;
+    height: 108px;
+
+    border-radius: 50%;
+    background: #FFFFFF;
+}
+
+.description-donut-center {
+    position: relative;
+    z-index: 1;
+
+    width: 92px;
+
+    display: grid;
+    gap: 2px;
+
+    text-align: center;
+}
+
+.description-donut-center span {
+    color: var(--muted);
+
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.description-donut-center strong {
+    min-width: 0;
+
+    color: var(--ink);
+
+    font-size: 14px;
+    font-weight: 800;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.description-donut-center em {
+    color: var(--muted);
+
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.description-donut-legend {
+    display: grid;
+    gap: 10px;
+}
+
+.description-donut-legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+}
+
+.description-donut-legend-label {
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.description-donut-dot {
+    width: 9px;
+    height: 9px;
+
+    flex: 0 0 9px;
+
+    border-radius: 50%;
+}
+
+.description-donut-name {
+    min-width: 0;
+
+    color: var(--ink);
+
+    font-size: 12px;
+    font-weight: 700;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.description-donut-value {
+    flex: 0 0 auto;
+
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+
+    white-space: nowrap;
+}
+
+.description-donut-value strong {
+    color: var(--ink);
+
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.description-donut-value span {
+    color: var(--muted);
+
+    font-size: 10px;
+}
+
+
+/* =========================
+   단일 카테고리 - 월별 추이
+========================= */
+
+.single-monthly-chart {
+    min-height: 190px;
+
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+
+    padding-top: 8px;
+}
+
+.single-monthly-item {
+    flex: 1;
+    min-width: 0;
+
+    display: grid;
+    grid-template-rows: 130px auto auto;
+    gap: 6px;
+
+    text-align: center;
+}
+
+.single-monthly-bar-area {
+    height: 130px;
+
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.single-monthly-bar {
+    width: min(34px, 70%);
+    height: 0;
+
+    border-radius: 8px 8px 0 0;
+
+    transition: height .25s ease;
+}
+
+.single-monthly-label {
+    color: var(--muted);
+
+    font-size: 10px;
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+.single-monthly-value {
+    color: var(--ink);
+
+    font-size: 11px;
+    font-weight: 800;
+
+    white-space: nowrap;
+}
+
+
+/* =========================
+   단일 카테고리 - 일별 추이
+========================= */
+
+.single-daily-list {
+    display: grid;
+    gap: 12px;
+}
+
+.single-daily-item {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr) auto;
+
+    align-items: center;
+    gap: 10px;
+}
+
+.single-daily-item > span {
+    color: var(--muted);
+
+    font-size: 11px;
+
+    white-space: nowrap;
+}
+
+.single-daily-item > strong {
+    color: var(--ink);
+
+    font-size: 12px;
+    font-weight: 800;
+
+    white-space: nowrap;
+}
+
+.single-daily-bar {
+    height: 7px;
+
+    border-radius: 999px;
+
+    background: #EEEEEE;
+
+    overflow: hidden;
+}
+
+.single-daily-fill {
+    width: 0;
+    height: 100%;
+
+    border-radius: inherit;
+
+    transition: width .25s ease;
+}
+
+
+/* =========================
+   Type B - Mobile
+========================= */
+
+@media (max-width: 620px) {
+
+    .description-donut {
+        width: 164px;
+        height: 164px;
+    }
+
+    .description-donut::after {
+        width: 100px;
+        height: 100px;
+    }
+
+    .single-monthly-chart {
+        gap: 6px;
+    }
+
+    .single-monthly-item {
+        grid-template-rows: 110px auto auto;
+    }
+
+    .single-monthly-bar-area {
+        height: 110px;
+    }
+
+    .single-daily-item {
+        grid-template-columns: 68px minmax(0, 1fr) auto;
+        gap: 7px;
+    }
 }

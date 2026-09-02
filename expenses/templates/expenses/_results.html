@@ -162,8 +162,140 @@
                     <p class="muted">표시할 데이터가 없어요.</p>
                 {% endif %}
             </article>
-        {% else %}
-            {# B / C / D는 다음 단계에서 구현 #}
+            {% elif dashboard_type == "B" %}
+                <article
+                    class="panel dashboard-card"
+                    data-description-donut
+                    data-color-key="{{ selected_category.color_key }}"
+                >
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">BREAKDOWN</p>
+                            <h2>내용별 지출 분석</h2>
+                        </div>
+                    </div>
+
+                    {% if stats.description_totals %}
+
+                        <div class="description-donut-source" hidden>
+                            {% for item in stats.description_totals %}
+                                <span
+                                    data-description-segment
+                                    data-name="{{ item.name }}"
+                                    data-amount="{{ item.amount }}"
+                                ></span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="description-donut-layout">
+
+                            <div class="description-donut">
+                                <div class="description-donut-center">
+                                    <span>가장 큰 비중</span>
+                                    <strong class="description-donut-top-name">-</strong>
+                                    <em class="description-donut-top-percent">0%</em>
+                                </div>
+                            </div>
+
+                            <div class="description-donut-legend"></div>
+
+                        </div>
+
+                    {% else %}
+                        <p class="muted">표시할 데이터가 없어요.</p>
+                    {% endif %}
+                </article>
+
+
+                <article class="panel dashboard-card">
+
+                    <div class="section-heading trend-heading">
+                        <div>
+                            <p class="eyebrow">
+                                {% if is_short_period %}
+                                    DAILY
+                                {% else %}
+                                    TREND
+                                {% endif %}
+                            </p>
+
+                            <h2>{{ selected_category.name }} 지출 추이</h2>
+                        </div>
+
+                        {% if not is_short_period %}
+                            <div class="trend-meta">
+                                <span class="trend-unit">단위: 만 원</span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+
+                    {% if is_short_period %}
+
+                        {% if stats.daily_totals %}
+                            <div class="single-daily-list">
+
+                                {% for date, amount in stats.daily_totals.items %}
+                                    <div class="single-daily-item">
+
+                                        <span>
+                                            {{ date }}
+                                        </span>
+
+                                        <div
+                                            class="single-daily-bar"
+                                            data-single-trend-value="{{ amount }}"
+                                            data-color-key="{{ selected_category.color_key }}"
+                                        >
+                                            <div class="single-daily-fill"></div>
+                                        </div>
+
+                                        <strong>
+                                            {{ amount|floatformat:"0g" }}원
+                                        </strong>
+
+                                    </div>
+                                {% endfor %}
+
+                            </div>
+                        {% else %}
+                            <p class="muted">표시할 데이터가 없어요.</p>
+                        {% endif %}
+
+
+                    {% else %}
+
+                        {% if stats.monthly_totals %}
+                            <div class="single-monthly-chart">
+
+                                {% for month, amount in stats.monthly_totals.items %}
+                                    <div
+                                        class="single-monthly-item"
+                                        data-single-month-value="{{ amount }}"
+                                        data-color-key="{{ selected_category.color_key }}"
+                                    >
+                                        <div class="single-monthly-bar-area">
+                                            <div class="single-monthly-bar"></div>
+                                        </div>
+
+                                        <span class="single-monthly-label">
+                                            {{ month }}
+                                        </span>
+
+                                        <strong class="single-monthly-value">
+                                            {{ amount|floatformat:"0g" }}원
+                                        </strong>
+                                    </div>
+                                {% endfor %}
+
+                            </div>
+                        {% else %}
+                            <p class="muted">표시할 데이터가 없어요.</p>
+                        {% endif %}
+                    {% endif %}
+                </article>
+                    {% else %}
+            {# C / D는 다음 단계에서 구현 #}
         {% endif %}
     </aside>
 </section>
