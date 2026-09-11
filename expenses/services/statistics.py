@@ -1,7 +1,13 @@
-import pandas as pd
+from collections import defaultdict
+from statistics import mean
 
 
 def build_statistics(expenses):
+    """Build dashboard statistics without a pandas dependency.
+
+    Keeping the result as plain Python data makes this service lightweight and
+    easier to reuse when the database is later changed from SQLite to PostgreSQL.
+    """
     records = list(
         expenses.values(
             "id",
@@ -17,8 +23,6 @@ def build_statistics(expenses):
         "count": 0,
         "total": 0,
         "largest": None,
-        "largest_day": None,
-        "category_totals": [],
         "category_share": [],
         "monthly_totals": {},
         "daily_totals": {},
@@ -31,120 +35,90 @@ def build_statistics(expenses):
     if not records:
         return empty
 
-    df = pd.DataFrame(records).rename(columns={"category__name": "category"})
-    df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0).astype(int)
-    df["date"] = df["date"].astype(str)
-    df["month"] = df["date"].str[:7]
+    total_amount = sum(int(row["amount"]) for row in records)
+    largest_row = max(records, key=lambda row: int(row["amount"]))
 
-    total_amount = int(df["amount"].sum())
-    largest_row = df.loc[df["amount"].idxmax()]
+    category_amounts = defaultdict(int)
+    category_meta = {}
+    description_amounts = defaultdict(int)
+    monthly_totals = defaultdict(int)
+    daily_totals = defaultdict(int)
+    monthly_by_category_map = defaultdict(int)
+    daily_by_category_map = defaultdict(int)
+    category_amount_lists = defaultdict(list)
 
-    category_totals_df = (
-        df.groupby(["category", "category__color_key"], as_index=False)["amount"]
-        .sum()
-        .sort_values("amount", ascending=False)
-    )
+    for row in records:
+        amount = int(row["amount"])
+        category = row["category__name"] or "미분류"
+        color_key = row["category__color_key"] or ""
+        day = row["date"].isoformat() if hasattr(row["date"], "isoformat") else str(row["date"])
+        month = day[:7]
+
+        category_meta[category] = color_key
+        category_amounts[category] += amount
+        category_amount_lists[category].append(amount)
+        description_amounts[row["description"]] += amount
+        monthly_totals[month] += amount
+        daily_totals[day] += amount
+        monthly_by_category_map[(month, category, color_key)] += amount
+        daily_by_category_map[(day, category, color_key)] += amount
+
     category_totals = [
-        {
-            "name": row["category"],
-            "color_key": row["category__color_key"],
-            "amount": int(row["amount"]),
-        }
-        for _, row in category_totals_df.iterrows()
+        {"name": name, "color_key": category_meta[name], "amount": amount}
+        for name, amount in sorted(category_amounts.items(), key=lambda item: item[1], reverse=True)
     ]
-
     category_share = [
         {
             **item,
-            "percentage": round((item["amount"] / total_amount) * 100, 1) if total_amount else 0,
+            "percentage": round(item["amount"] / total_amount * 100, 1) if total_amount else 0,
         }
         for item in category_totals
     ]
 
-    monthly_totals = df.groupby("month")["amount"].sum().sort_index().to_dict()
-    daily_totals = df.groupby("date")["amount"].sum().sort_index().to_dict()
-
-    largest_day_key = max(daily_totals, key=daily_totals.get)
-    largest_day = {"date": str(largest_day_key), "amount": int(daily_totals[largest_day_key])}
-
-    description_totals_df = (
-        df.groupby("description", as_index=False)["amount"]
-        .sum()
-        .sort_values("amount", ascending=False)
-    )
+    sorted_daily_totals = dict(sorted(daily_totals.items()))
     description_totals = [
-        {"name": row["description"], "amount": int(row["amount"])}
-        for _, row in description_totals_df.iterrows()
+        {"name": name, "amount": amount}
+        for name, amount in sorted(description_amounts.items(), key=lambda item: item[1], reverse=True)
     ]
 
-    category_comparison_df = (
-        df.groupby(["category", "category__color_key"], as_index=False)
-        .agg(total=("amount", "sum"), count=("amount", "size"), average=("amount", "mean"))
-        .sort_values("total", ascending=False)
-    )
     category_comparison = [
         {
-            "name": row["category"],
-            "color_key": row["category__color_key"],
-            "total": int(row["total"]),
-            "count": int(row["count"]),
-            "average": int(round(row["average"])),
+            "name": name,
+            "color_key": category_meta[name],
+            "total": sum(amounts),
+            "count": len(amounts),
+            "average": int(round(mean(amounts))),
         }
-        for _, row in category_comparison_df.iterrows()
+        for name, amounts in category_amount_lists.items()
     ]
+    category_comparison.sort(key=lambda item: item["total"], reverse=True)
 
-    monthly_by_category_df = (
-        df.groupby(["month", "category", "category__color_key"], as_index=False)["amount"]
-        .sum()
-        .sort_values(["month", "category"])
-    )
     monthly_by_category = [
-        {
-            "period": row["month"],
-            "name": row["category"],
-            "color_key": row["category__color_key"],
-            "amount": int(row["amount"]),
-        }
-        for _, row in monthly_by_category_df.iterrows()
+        {"period": period, "name": name, "color_key": color_key, "amount": amount}
+        for (period, name, color_key), amount in sorted(monthly_by_category_map.items())
     ]
-
-    daily_by_category_df = (
-        df.groupby(["date", "category", "category__color_key"], as_index=False)["amount"]
-        .sum()
-        .sort_values(["date", "category"])
-    )
     daily_by_category = [
-        {
-            "period": row["date"],
-            "name": row["category"],
-            "color_key": row["category__color_key"],
-            "amount": int(row["amount"]),
-        }
-        for _, row in daily_by_category_df.iterrows()
+        {"period": period, "name": name, "color_key": color_key, "amount": amount}
+        for (period, name, color_key), amount in sorted(daily_by_category_map.items())
     ]
-
-    unique_days = df["date"].nunique()
-    daily_average = int(round(total_amount / unique_days)) if unique_days else 0
 
     return {
-        "count": int(len(df)),
+        "count": len(records),
         "total": total_amount,
         "largest": {
             "id": int(largest_row["id"]),
-            "date": str(largest_row["date"]),
-            "category": str(largest_row["category"]),
-            "category_color_key": str(largest_row["category__color_key"]),
+            "date": largest_row["date"].isoformat() if hasattr(largest_row["date"], "isoformat") else str(largest_row["date"]),
+            "category": largest_row["category__name"] or "미분류",
+            "category_color_key": largest_row["category__color_key"] or "",
             "description": str(largest_row["description"]),
             "amount": int(largest_row["amount"]),
         },
-        "largest_day": largest_day,
-        "category_totals": category_totals,
         "category_share": category_share,
-        "monthly_totals": {str(k): int(v) for k, v in monthly_totals.items()},
-        "daily_totals": {str(k): int(v) for k, v in daily_totals.items()},
+        "monthly_totals": dict(sorted(monthly_totals.items())),
+        "daily_totals": sorted_daily_totals,
         "monthly_by_category": monthly_by_category,
         "daily_by_category": daily_by_category,
         "description_totals": description_totals,
-        "daily_average": daily_average,
+        "daily_average": int(round(total_amount / len(sorted_daily_totals))) if sorted_daily_totals else 0,
         "category_comparison": category_comparison,
     }

@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 
 from django.contrib import messages
 from django.http import JsonResponse
@@ -8,7 +9,31 @@ from django.template.loader import render_to_string
 from .forms import ExpenseForm
 from .models import Category, CategoryKeyword, Expense
 from .services.statistics import build_statistics
-from datetime import datetime
+
+
+CUSTOM_CATEGORY_COLORS = (
+    "dusty_pink",
+    "soft_olive",
+    "muted_sky",
+    "warm_taupe",
+    "soft_plum",
+    "dusty_cyan",
+    "mellow_peach",
+    "soft_lilac",
+)
+
+
+def _form_options():
+    return {
+        "form_categories": Category.objects.all().order_by("-is_default", "id"),
+        "category_keywords": CategoryKeyword.objects.select_related("category").all(),
+    }
+
+
+def _delete_unused_custom_category(category):
+    if category and not category.is_default and not category.expenses.exists():
+        category.delete()
+
 
 
 def _build_list_context(request):
@@ -158,8 +183,6 @@ def expense_list(request):
 
 
 def expense_create(request):
-    categories = Category.objects.all().order_by("-is_default", "id")
-    category_keywords = CategoryKeyword.objects.select_related("category").all()
     if request.method == "POST":
         form = ExpenseForm(request.POST)
         if form.is_valid():
@@ -175,17 +198,13 @@ def expense_create(request):
         {
             "form": form,
             "is_edit": False,
-            "form_categories": categories,
-            "category_keywords": category_keywords,
+            **_form_options(),
         },
     )
 
 
 def expense_update(request, pk):
     expense = get_object_or_404(Expense, pk=pk)
-
-    categories = Category.objects.all().order_by("-is_default", "id")
-    category_keywords = CategoryKeyword.objects.select_related("category").all()
 
     if request.method == "POST":
         # 수정하기 전 기존 카테고리를 기억합니다.
@@ -199,13 +218,8 @@ def expense_update(request, pk):
             # 카테고리가 변경되었고,
             # 기존 카테고리가 사용자 생성 카테고리이며,
             # 더 이상 사용하는 지출이 없다면 자동 삭제합니다.
-            if (
-                old_category
-                and old_category != updated_expense.category
-                and not old_category.is_default
-                and not old_category.expenses.exists()
-            ):
-                old_category.delete()
+            if old_category != updated_expense.category:
+                _delete_unused_custom_category(old_category)
 
             messages.info(request, "지출을 수정했습니다.")
             return redirect("expense_list")
@@ -219,8 +233,7 @@ def expense_update(request, pk):
             "form": form,
             "is_edit": True,
             "expense": expense,
-            "form_categories": categories,
-            "category_keywords": category_keywords,
+            **_form_options(),
         },
     )
 
@@ -236,12 +249,7 @@ def expense_delete(request, pk):
 
         # 기본 카테고리는 절대 삭제하지 않습니다.
         # 사용자 생성 카테고리만 사용 중인 지출이 0건이면 자동 삭제합니다.
-        if (
-            category
-            and not category.is_default
-            and not category.expenses.exists()
-        ):
-            category.delete()
+        _delete_unused_custom_category(category)
 
         messages.warning(request, "지출을 삭제했습니다.")
 
@@ -304,17 +312,6 @@ def category_create(request):
             status=400,
         )
 
-    custom_palette = [
-        "dusty_pink",
-        "soft_olive",
-        "muted_sky",
-        "warm_taupe",
-        "soft_plum",
-        "dusty_cyan",
-        "mellow_peach",
-        "soft_lilac",
-    ]
-
     used_colors = set(
         Category.objects.filter(
             is_default=False
@@ -326,14 +323,14 @@ def category_create(request):
 
     available_colors = [
         color
-        for color in custom_palette
+        for color in CUSTOM_CATEGORY_COLORS
         if color not in used_colors
     ]
 
     if available_colors:
         color_key = random.choice(available_colors)
     else:
-        color_key = random.choice(custom_palette)
+        color_key = random.choice(CUSTOM_CATEGORY_COLORS)
 
     category = Category.objects.create(
         name=name,

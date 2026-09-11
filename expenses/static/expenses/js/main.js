@@ -55,30 +55,13 @@ function openConfirmModal({
     });
 }
 
-const categoryPalettes = {
-    sage: ["#EFF7F2", "#4F8068", "#6F927F"],
-    soft_blue: ["#EEF3FA", "#58759A", "#6F86A3"],
-    warm_orange: ["#FFF4E8", "#A8753F", "#B38A5A"],
-    dusty_teal: ["#EEF7F7", "#4F7F7C", "#668F8B"],
-    soft_coral: ["#FFF0EE", "#B96860", "#BD786F"],
-    muted_rose: ["#FBEFF1", "#A65F69", "#A96D77"],
-    lavender: ["#F5F0FA", "#78658F", "#8A769E"],
-    slate_indigo: ["#EFF1F7", "#596782", "#68758D"],
-    mustard: ["#FFF7E5", "#937640", "#A28754"],
-    mint: ["#EEF8F4", "#568472", "#6F9989"],
-
-    dusty_pink: ["#FAF0F3", "#9B6F7C", "#AD818E"],
-    soft_olive: ["#F4F5EC", "#777B57", "#8B8F68"],
-    muted_sky: ["#EFF5F8", "#627F8D", "#7593A0"],
-    warm_taupe: ["#F7F2EE", "#806D61", "#927E71"],
-    soft_plum: ["#F5EFF5", "#806780", "#937993"],
-    dusty_cyan: ["#EEF6F6", "#5E8182", "#719395"],
-    mellow_peach: ["#FCF1E9", "#9D765D", "#AF876D"],
-    soft_lilac: ["#F5F1F8", "#7B6E8D", "#8D7FA0"],
-};
-
 function getCategoryPalette(colorKey) {
-    return categoryPalettes[colorKey] || ["#F3F3F3", "#666666", "#888888"];
+    const styles = getComputedStyle(document.documentElement);
+    const prefix = `--category-${colorKey.replaceAll("_", "-")}`;
+    const bg = styles.getPropertyValue(`${prefix}-bg`).trim() || "#F3F3F3";
+    const text = styles.getPropertyValue(`${prefix}-text`).trim() || "#666666";
+    const solid = styles.getPropertyValue(`${prefix}-solid`).trim() || "#888888";
+    return [bg, text, solid];
 }
 
 function hexToRgb(hex) {
@@ -203,238 +186,34 @@ function decorateResults() {
         chip.style.color = text;
     });
 
-    const barItems = [...document.querySelectorAll("[data-bar-amount]")];
-    const maxAmount = barItems.reduce(
-        (max, item) => Math.max(max, Number(item.dataset.barAmount) || 0),
-        0
-    );
-
-    barItems.forEach((item) => {
-        const amount = Number(item.dataset.barAmount || 0);
-        const fill = item.querySelector(".bar-fill");
-
-        const colorKey = item.dataset.colorKey;
-        const [, , solid] = getCategoryPalette(colorKey);
-
-        if (fill) {
-            fill.style.width = `${maxAmount ? (amount / maxAmount) * 100 : 0}%`;
-            fill.style.backgroundColor = solid;
-        }
-    });
-
     bindDeleteConfirm();
 
-    renderCategoryDonut();
-    renderTrendChart();
-
+    renderCategoryDonuts();
     renderDescriptionDonut();
-    renderSingleCategoryTrend();
     renderAdaptiveTrendCharts();
     renderComparisonDashboard();
 }
 
-function renderCategoryDonut() {
-    const donut = document.querySelector("#categoryDonut");
+function renderCategoryDonuts() {
+    document.querySelectorAll("[data-category-donut]").forEach((donut) => {
+        const card = donut.closest(".dashboard-card");
+        const segments = [...card.querySelectorAll("[data-donut-segment]")];
+        if (!segments.length) return;
 
-    const segments = [
-        ...document.querySelectorAll("[data-donut-segment]")
-    ];
+        let currentDegree = 0;
+        const gradients = segments.map((segment) => {
+            const percentage = Number(segment.dataset.percentage || 0);
+            const [, , solid] = getCategoryPalette(segment.dataset.colorKey);
+            const start = currentDegree;
+            const end = currentDegree + (percentage / 100) * 360;
+            currentDegree = end;
 
-    if (!donut || !segments.length) return;
-
-    let currentDegree = 0;
-
-    const gradients = segments.map((segment) => {
-        const percentage = Number(
-            segment.dataset.percentage || 0
-        );
-
-        const colorKey = segment.dataset.colorKey;
-
-        const [, , solid] = getCategoryPalette(colorKey);
-
-        const start = currentDegree;
-
-        const end =
-            currentDegree +
-            (percentage / 100) * 360;
-
-        currentDegree = end;
-
-        const dot = segment.querySelector(".donut-dot");
-
-        if (dot) {
-            dot.style.backgroundColor = solid;
-        }
-
-        return `${solid} ${start}deg ${end}deg`;
-    });
-
-    donut.style.background =
-        `conic-gradient(${gradients.join(", ")})`;
-}
-
-function renderTrendChart() {
-    const chart = document.querySelector("#trendChart");
-    const scale = document.querySelector("#trendScale");
-    const yearLabel = document.querySelector("#trendYearLabel");
-    const unitBadge = chart?.closest(".dashboard-card")?.querySelector(".trend-unit");
-
-    if (!chart || !scale) return;
-
-    const items = [...chart.querySelectorAll("[data-trend-month]")];
-    if (!items.length) return;
-
-    const data = items.map((item) => ({
-        monthKey: item.dataset.trendMonth,
-        amount: Number(item.dataset.trendAmount || 0),
-        item,
-    }));
-
-    const amounts = data.map((d) => d.amount);
-    const maxAmount = Math.max(...amounts, 0);
-
-    const displayUnit = getTrendDisplayUnit(maxAmount);
-    const topScaledValue = getNiceTrendTop(maxAmount, displayUnit.divisor);
-    const topValue = topScaledValue * displayUnit.divisor;
-
-    if (unitBadge) {
-        unitBadge.textContent = `단위: ${displayUnit.label}`;
-    }
-
-    // 연도 표시
-    const years = [...new Set(data.map((d) => d.monthKey.slice(0, 4)))];
-    if (yearLabel) {
-        if (years.length === 1) {
-            yearLabel.textContent = `${years[0]}년`;
-        } else {
-            yearLabel.textContent = `${years[0]}–${years[years.length - 1]}년`;
-        }
-    }
-
-    // 보조선 + 눈금
-    scale.innerHTML = "";
-
-    const ratios = [1, 0.75, 0.5, 0.25, 0];
-    ratios.forEach((ratio) => {
-        const value = Math.round(topValue * ratio);
-
-        const row = document.createElement("div");
-        row.className = "trend-scale-row";
-        row.style.top = `${(1 - ratio) * 100}%`;
-
-        row.innerHTML = `
-            <span class="trend-scale-label">${(value / displayUnit.divisor).toFixed(displayUnit.decimals)}</span>
-            <span class="trend-scale-line"></span>
-        `;
-
-        scale.appendChild(row);
-    });
-
-    // 월 표기 / 막대 높이
-    data.forEach(({ monthKey, amount, item }) => {
-        const monthEl = item.querySelector(".trend-month");
-        const bar = item.querySelector(".trend-bar");
-        const amountEl = item.querySelector(".trend-amount");
-
-        const [, month] = monthKey.split("-");
-
-        if (monthEl) {
-            monthEl.textContent = `${Number(month)}월`;
-        }
-
-        if (amountEl) {
-            amountEl.textContent = (amount / displayUnit.divisor).toFixed(displayUnit.decimals);
-        }
-
-        if (bar) {
-            const heightRatio = topValue ? amount / topValue : 0;
-            bar.style.height = `${heightRatio * 100}%`;
-        }
-    });
-}
-
-function renderSingleCategoryTrend() {
-    const monthlyItems = [
-        ...document.querySelectorAll(
-            "[data-single-month-value]"
-        )
-    ];
-
-    if (monthlyItems.length) {
-        const maxValue = monthlyItems.reduce(
-            (max, item) => Math.max(
-                max,
-                Number(item.dataset.singleMonthValue || 0)
-            ),
-            0
-        );
-
-        monthlyItems.forEach((item) => {
-            const value = Number(
-                item.dataset.singleMonthValue || 0
-            );
-
-            const colorKey = item.dataset.colorKey;
-
-            const bar = item.querySelector(
-                ".single-monthly-bar"
-            );
-
-            const [, , solid] =
-                getCategoryPalette(colorKey);
-
-            if (!bar) return;
-
-            const percentage =
-                maxValue
-                    ? (value / maxValue) * 100
-                    : 0;
-
-            bar.style.height =
-                `${Math.max(percentage, 6)}%`;
-
-            bar.style.backgroundColor = solid;
+            const dot = segment.querySelector(".donut-dot");
+            if (dot) dot.style.backgroundColor = solid;
+            return `${solid} ${start}deg ${end}deg`;
         });
-    }
 
-
-    const dailyItems = [
-        ...document.querySelectorAll(
-            "[data-single-trend-value]"
-        )
-    ];
-
-    if (!dailyItems.length) return;
-
-    const maxDaily = dailyItems.reduce(
-        (max, item) => Math.max(
-            max,
-            Number(item.dataset.singleTrendValue || 0)
-        ),
-        0
-    );
-
-    dailyItems.forEach((item) => {
-        const value = Number(
-            item.dataset.singleTrendValue || 0
-        );
-
-        const colorKey = item.dataset.colorKey;
-
-        const fill = item.querySelector(
-            ".single-daily-fill"
-        );
-
-        const [, , solid] =
-            getCategoryPalette(colorKey);
-
-        if (!fill) return;
-
-        fill.style.width =
-            `${maxDaily ? (value / maxDaily) * 100 : 0}%`;
-
-        fill.style.backgroundColor = solid;
+        donut.style.background = `conic-gradient(${gradients.join(", ")})`;
     });
 }
 
@@ -698,7 +477,7 @@ function getNiceTrendTop(maxAmount, divisor) {
     return nice * magnitude;
 }
 
-function formatAdaptivePeriodLabel(periods, granularity) {
+function formatTrendPeriodLabel(periods, granularity) {
     if (!periods.length) return "";
     const years = [...new Set(periods.map((period) => period.slice(0, 4)))];
     if (granularity === "day") {
@@ -711,13 +490,28 @@ function formatAdaptivePeriodLabel(periods, granularity) {
     return years.length === 1 ? `${years[0]}년` : `${years[0]}–${years[years.length - 1]}년`;
 }
 
-function formatAdaptiveXAxis(period, granularity) {
+function formatTrendXAxis(period, granularity) {
     if (granularity === "day") {
         const [, month, day] = period.split("-");
         return `${Number(month)}/${Number(day)}`;
     }
     const [, month] = period.split("-");
     return `${Number(month)}월`;
+}
+
+function renderTrendScale(scale, top, unit, classPrefix) {
+    if (!scale) return;
+    scale.innerHTML = "";
+    [1, 0.75, 0.5, 0.25, 0].forEach((ratio) => {
+        const row = document.createElement("div");
+        row.className = `${classPrefix}-scale-row`;
+        row.style.top = `${(1 - ratio) * 100}%`;
+        row.innerHTML = `
+            <span class="${classPrefix}-scale-label">${(top * ratio).toFixed(unit.decimals)}</span>
+            <span class="${classPrefix}-scale-line"></span>
+        `;
+        scale.appendChild(row);
+    });
 }
 
 function renderAdaptiveTrendCharts() {
@@ -740,20 +534,10 @@ function renderAdaptiveTrendCharts() {
         const unit = getTrendDisplayUnit(maxAmount);
         const top = getNiceTrendTop(maxAmount, unit.divisor);
 
-        if (periodLabel) periodLabel.textContent = formatAdaptivePeriodLabel(data.map((row) => row.period), granularity);
+        if (periodLabel) periodLabel.textContent = formatTrendPeriodLabel(data.map((row) => row.period), granularity);
         if (unitBadge) unitBadge.textContent = `단위: ${unit.label}`;
 
-        if (scale) {
-            scale.innerHTML = "";
-            [1, .75, .5, .25, 0].forEach((ratio) => {
-                const row = document.createElement("div");
-                row.className = "adaptive-trend-scale-row";
-                row.style.top = `${(1 - ratio) * 100}%`;
-                const value = top * ratio;
-                row.innerHTML = `<span class="adaptive-trend-scale-label">${value.toFixed(unit.decimals)}</span><span class="adaptive-trend-scale-line"></span>`;
-                scale.appendChild(row);
-            });
-        }
+        renderTrendScale(scale, top, unit, "adaptive-trend");
 
         let solid = "#FFE860";
         if (colorKey && colorKey !== "accent") {
@@ -764,7 +548,7 @@ function renderAdaptiveTrendCharts() {
             const label = item.querySelector(".adaptive-trend-label");
             const value = item.querySelector(".adaptive-trend-value");
             const bar = item.querySelector(".adaptive-trend-bar");
-            if (label) label.textContent = formatAdaptiveXAxis(period, granularity);
+            if (label) label.textContent = formatTrendXAxis(period, granularity);
             if (value) value.textContent = (amount / unit.divisor).toFixed(unit.decimals);
             if (bar) {
                 bar.style.height = `${top ? ((amount / unit.divisor) / top) * 100 : 0}%`;
@@ -809,7 +593,7 @@ function renderComparisonDashboard() {
         const unit = getTrendDisplayUnit(maxAmount);
         const top = getNiceTrendTop(maxAmount, unit.divisor);
 
-        if (periodLabel) periodLabel.textContent = formatAdaptivePeriodLabel(periods, granularity);
+        if (periodLabel) periodLabel.textContent = formatTrendPeriodLabel(periods, granularity);
         if (unitBadge) unitBadge.textContent = `단위: ${unit.label}`;
 
         if (legend) {
@@ -819,17 +603,7 @@ function renderComparisonDashboard() {
             }).join("");
         }
 
-        if (scale) {
-            scale.innerHTML = "";
-            [1, .75, .5, .25, 0].forEach((ratio) => {
-                const value = top * ratio;
-                const row = document.createElement("div");
-                row.className = "comparison-trend-scale-row";
-                row.style.top = `${(1 - ratio) * 100}%`;
-                row.innerHTML = `<span class="comparison-trend-scale-label">${value.toFixed(unit.decimals)}</span><span class="comparison-trend-scale-line"></span>`;
-                scale.appendChild(row);
-            });
-        }
+        renderTrendScale(scale, top, unit, "comparison-trend");
 
         if (bars) {
             bars.innerHTML = "";
@@ -853,7 +627,7 @@ function renderComparisonDashboard() {
 
                 const label = document.createElement("span");
                 label.className = "comparison-trend-label";
-                label.textContent = formatAdaptiveXAxis(period, granularity);
+                label.textContent = formatTrendXAxis(period, granularity);
                 group.append(barGroup, label);
                 bars.appendChild(group);
             });

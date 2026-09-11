@@ -1,3 +1,4 @@
+{% load static %}
 <section class="summary-grid" id="summaryArea">
     {% if dashboard_type == "D" %}
         <article class="summary-card comparison-summary-card">
@@ -123,7 +124,7 @@
             </div>
         {% else %}
             <div class="empty-state">
-                <img class="empty-state-logo" src="/static/expenses/images/logo-sseum-symbol.png" alt="" aria-hidden="true">
+                <img class="empty-state-logo" src="{% static 'expenses/images/logo-sseum-symbol.png' %}" alt="" aria-hidden="true">
                 <strong>조건에 맞는 지출이 없어요.</strong>
                 <p>필터를 바꾸거나 새로운 지출을 추가해 보세요.</p>
             </div>
@@ -135,35 +136,24 @@
             <article class="panel dashboard-card">
                 <div class="section-heading"><div><p class="eyebrow">CATEGORY</p><h2>카테고리 구성</h2></div></div>
                 {% if stats.category_share %}
-                    <div class="donut-layout">
-                        <div class="donut-chart" id="categoryDonut" data-total="{{ stats.total }}">
-                            <div class="donut-center"><span>총 지출</span><strong>{{ stats.total|floatformat:"0g" }}원</strong></div>
-                        </div>
-                        <div class="donut-legend">
-                            {% for item in stats.category_share %}
-                                <div class="donut-legend-item" data-donut-segment data-percentage="{{ item.percentage }}" data-color-key="{{ item.color_key }}">
-                                    <div class="donut-legend-label"><span class="donut-dot"></span><span>{{ item.name }}</span></div>
-                                    <div class="donut-legend-value"><strong>{{ item.percentage }}%</strong><span>{{ item.amount|floatformat:"0g" }}원</span></div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
+                    {% include "expenses/_category_donut.html" with donut_center_label="총 지출" %}
                 {% else %}<p class="muted">표시할 데이터가 없어요.</p>{% endif %}
             </article>
 
             <article class="panel dashboard-card">
                 <div class="section-heading trend-heading">
                     <div><p class="eyebrow">MONTHLY</p><h2>월별 지출 추이</h2></div>
-                    <div class="trend-meta"><span class="trend-year" id="trendYearLabel"></span><span class="trend-unit">단위: 만 원</span></div>
+                    <div class="trend-meta"><span class="trend-year" data-adaptive-period-label></span><span class="trend-unit" data-adaptive-unit></span></div>
                 </div>
                 {% if stats.monthly_totals %}
-                    <div class="trend-chart" id="trendChart">
-                        <div class="trend-scale" id="trendScale"></div>
-                        <div class="trend-bars">
+                    <div class="adaptive-trend" data-adaptive-trend data-granularity="month" data-color-key="accent">
+                        <div class="adaptive-trend-scale"></div>
+                        <div class="adaptive-trend-bars">
                             {% for month, amount in stats.monthly_totals.items %}
-                                <div class="trend-item" data-trend-month="{{ month }}" data-trend-amount="{{ amount }}">
-                                    <div class="trend-bar-area"><div class="trend-bar"></div></div>
-                                    <span class="trend-month"></span><strong class="trend-amount">{{ amount|floatformat:"0g" }}원</strong>
+                                <div class="adaptive-trend-item" data-period="{{ month }}" data-amount="{{ amount }}">
+                                    <div class="adaptive-trend-bar-area"><div class="adaptive-trend-bar adaptive-trend-bar-accent"></div></div>
+                                    <span class="adaptive-trend-label"></span>
+                                    <strong class="adaptive-trend-value"></strong>
                                 </div>
                             {% endfor %}
                         </div>
@@ -209,12 +199,7 @@
             <article class="panel dashboard-card">
                 <div class="section-heading"><div><p class="eyebrow">CATEGORY</p><h2>기간 카테고리 구성</h2></div></div>
                 {% if stats.category_share %}
-                    <div class="donut-layout">
-                        <div class="donut-chart" id="categoryDonut" data-total="{{ stats.total }}"><div class="donut-center"><span>기간 총 지출</span><strong>{{ stats.total|floatformat:"0g" }}원</strong></div></div>
-                        <div class="donut-legend">
-                            {% for item in stats.category_share %}<div class="donut-legend-item" data-donut-segment data-percentage="{{ item.percentage }}" data-color-key="{{ item.color_key }}"><div class="donut-legend-label"><span class="donut-dot"></span><span>{{ item.name }}</span></div><div class="donut-legend-value"><strong>{{ item.percentage }}%</strong><span>{{ item.amount|floatformat:"0g" }}원</span></div></div>{% endfor %}
-                        </div>
-                    </div>
+                    {% include "expenses/_category_donut.html" with donut_center_label="기간 총 지출" %}
                 {% else %}<p class="muted">표시할 데이터가 없어요.</p>{% endif %}
             </article>
 

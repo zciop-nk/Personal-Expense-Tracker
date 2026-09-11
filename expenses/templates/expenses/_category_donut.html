@@ -1,0 +1,27 @@
+<div class="donut-layout">
+    <div class="donut-chart" data-category-donut>
+        <div class="donut-center">
+            <span>{{ donut_center_label }}</span>
+            <strong>{{ stats.total|floatformat:"0g" }}원</strong>
+        </div>
+    </div>
+    <div class="donut-legend">
+        {% for item in stats.category_share %}
+            <div
+                class="donut-legend-item"
+                data-donut-segment
+                data-percentage="{{ item.percentage }}"
+                data-color-key="{{ item.color_key }}"
+            >
+                <div class="donut-legend-label">
+                    <span class="donut-dot"></span>
+                    <span>{{ item.name }}</span>
+                </div>
+                <div class="donut-legend-value">
+                    <strong>{{ item.percentage }}%</strong>
+                    <span>{{ item.amount|floatformat:"0g" }}원</span>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
