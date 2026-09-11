@@ -195,25 +195,74 @@ function decorateResults() {
 }
 
 function renderCategoryDonuts() {
-    document.querySelectorAll("[data-category-donut]").forEach((donut) => {
-        const card = donut.closest(".dashboard-card");
-        const segments = [...card.querySelectorAll("[data-donut-segment]")];
+    const donuts = [
+        ...document.querySelectorAll(
+            "[data-category-donut], #categoryDonut"
+        ),
+    ];
+
+    donuts.forEach((donut) => {
+        const card =
+            donut.closest(".dashboard-card") ||
+            donut.closest(".panel") ||
+            donut.parentElement;
+
+        if (!card) return;
+
+        const segments = [
+            ...card.querySelectorAll(
+                "[data-donut-segment]"
+            ),
+        ];
+
         if (!segments.length) return;
 
         let currentDegree = 0;
-        const gradients = segments.map((segment) => {
-            const percentage = Number(segment.dataset.percentage || 0);
-            const [, , solid] = getCategoryPalette(segment.dataset.colorKey);
-            const start = currentDegree;
-            const end = currentDegree + (percentage / 100) * 360;
-            currentDegree = end;
 
-            const dot = segment.querySelector(".donut-dot");
-            if (dot) dot.style.backgroundColor = solid;
-            return `${solid} ${start}deg ${end}deg`;
-        });
+        const gradients = segments
+            .map((segment) => {
+                const percentage = Number(
+                    String(
+                        segment.dataset.percentage || 0
+                    ).replace(",", ".")
+                );
 
-        donut.style.background = `conic-gradient(${gradients.join(", ")})`;
+                const colorKey =
+                    segment.dataset.colorKey;
+
+                const [, , solid] =
+                    getCategoryPalette(colorKey);
+
+                if (
+                    !Number.isFinite(percentage) ||
+                    percentage <= 0
+                ) {
+                    return null;
+                }
+
+                const start = currentDegree;
+
+                const end =
+                    currentDegree +
+                    (percentage / 100) * 360;
+
+                currentDegree = end;
+
+                const dot =
+                    segment.querySelector(".donut-dot");
+
+                if (dot) {
+                    dot.style.backgroundColor = solid;
+                }
+
+                return `${solid} ${start}deg ${end}deg`;
+            })
+            .filter(Boolean);
+
+        if (!gradients.length) return;
+
+        donut.style.background =
+            `conic-gradient(${gradients.join(", ")})`;
     });
 }
 
@@ -466,14 +515,44 @@ function getTrendDisplayUnit(maxAmount) {
 
 function getNiceTrendTop(maxAmount, divisor) {
     const scaled = maxAmount / divisor;
+
     if (scaled <= 0) return 1;
-    const magnitude = 10 ** Math.floor(Math.log10(scaled));
-    const normalized = scaled / magnitude;
-    let nice = 1;
-    if (normalized <= 1) nice = 1;
-    else if (normalized <= 2) nice = 2;
-    else if (normalized <= 5) nice = 5;
-    else nice = 10;
+
+    /*
+     * 실제 최댓값보다 약 12%만 여유를 둡니다.
+     * 예: 105.6 → 약 118.3
+     */
+    const padded = scaled * 1.12;
+
+    const magnitude =
+        10 ** Math.floor(Math.log10(padded));
+
+    const normalized =
+        padded / magnitude;
+
+    /*
+     * 기존 1 / 2 / 5 / 10보다
+     * 단계를 촘촘하게 만들어 과도한 여백을 방지합니다.
+     */
+    const niceSteps = [
+        1,
+        1.2,
+        1.5,
+        2,
+        2.5,
+        3,
+        4,
+        5,
+        6,
+        8,
+        10,
+    ];
+
+    const nice =
+        niceSteps.find(
+            (step) => normalized <= step
+        ) ?? 10;
+
     return nice * magnitude;
 }
 
@@ -535,7 +614,7 @@ function renderAdaptiveTrendCharts() {
         const top = getNiceTrendTop(maxAmount, unit.divisor);
 
         if (periodLabel) periodLabel.textContent = formatTrendPeriodLabel(data.map((row) => row.period), granularity);
-        if (unitBadge) unitBadge.textContent = `단위: ${unit.label}`;
+        if (unitBadge) unitBadge.textContent = unit.label;
 
         renderTrendScale(scale, top, unit, "adaptive-trend");
 
@@ -721,18 +800,26 @@ function initListPage() {
 
         if (dateFrom.value || dateTo.value) {
             count += 1;
+
             const chip = document.createElement("span");
             chip.className = "filter-chip";
-            chip.style.backgroundColor = "#FFF7E8";
-            chip.style.color = "#9A611A";
-            chip.style.borderColor = "#F0D2A6";
-            chip.innerHTML = `<span>${dateRangeLabel.textContent}</span><button type="button" aria-label="기간 필터 제거">×</button>`;
+
+            chip.style.backgroundColor = "#FFF9D8";
+            chip.style.color = "#4A431E";
+            chip.style.borderColor = "#FFE860";
+
+            chip.innerHTML = `
+                <span>${dateRangeLabel.textContent}</span>
+                <button type="button" aria-label="기간 필터 제거">×</button>
+            `;
+
             chip.querySelector("button").addEventListener("click", () => {
                 dateFrom.value = "";
                 dateTo.value = "";
                 periodValue.value = "";
                 applyFilters();
             });
+
             activeChips.appendChild(chip);
         }
 
