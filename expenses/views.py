@@ -86,13 +86,34 @@ def _build_list_context(request):
         dashboard_type = "C"
 
     selected_category = None
+    selected_category_objects = list(
+        Category.objects.filter(name__in=selected_categories).order_by("name")
+    )
 
     if selected_count == 1:
-        selected_category = Category.objects.filter(
-            name=selected_categories[0]
-        ).first()
+        selected_category = selected_category_objects[0] if selected_category_objects else None
 
     stats = build_statistics(expenses)
+
+    # C 타입의 하루 평균은 "지출이 있었던 날"이 아니라 선택 기간 전체 날짜 수 기준입니다.
+    period_daily_average = stats["daily_average"]
+    if period_days and period_days > 0:
+        period_daily_average = int(round(stats["total"] / period_days))
+
+    comparison_map = {item["name"]: item for item in stats["category_comparison"]}
+    comparison_rows = []
+    for category in selected_category_objects:
+        item = comparison_map.get(category.name)
+        comparison_rows.append(
+            item
+            or {
+                "name": category.name,
+                "color_key": category.color_key,
+                "total": 0,
+                "count": 0,
+                "average": 0,
+            }
+        )
 
     return {
         "expenses": expenses,
@@ -104,8 +125,11 @@ def _build_list_context(request):
 
         "dashboard_type": dashboard_type,
         "selected_category": selected_category,
+        "selected_category_objects": selected_category_objects,
         "is_short_period": is_short_period,
         "period_days": period_days,
+        "period_daily_average": period_daily_average,
+        "comparison_rows": comparison_rows,
 
         "stats": stats,
     }
@@ -183,7 +207,7 @@ def expense_update(request, pk):
             ):
                 old_category.delete()
 
-            messages.success(request, "지출을 수정했습니다.")
+            messages.info(request, "지출을 수정했습니다.")
             return redirect("expense_list")
     else:
         form = ExpenseForm(instance=expense)
@@ -219,7 +243,7 @@ def expense_delete(request, pk):
         ):
             category.delete()
 
-        messages.success(request, "지출을 삭제했습니다.")
+        messages.warning(request, "지출을 삭제했습니다.")
 
     return redirect("expense_list")
 

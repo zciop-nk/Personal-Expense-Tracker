@@ -1985,3 +1985,175 @@ h2{
         gap: 7px;
     }
 }
+/* =========================
+   Compact flash messages
+========================= */
+.flash-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.flash {
+    width: min(100%, 420px);
+    min-height: 44px;
+    padding: 10px 10px 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 8px 24px rgba(26, 26, 26, .06);
+    font-size: 13px;
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.flash.success { border-color: #CFE7D2; background: #F5FBF6; color: #35643E; }
+.flash.info { border-color: #CFDDEA; background: #F5F9FC; color: #4C667E; }
+.flash.warning { border-color: #EBCBCB; background: #FFF5F5; color: #A64E4E; }
+.flash.error { border-color: #EBCBCB; background: #FFF5F5; color: #A64E4E; }
+.flash.is-hiding { opacity: 0; transform: translateY(-6px); }
+.flash-message { min-width: 0; }
+.flash-close {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: currentColor;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: .72;
+}
+.flash-close:hover { background: rgba(0,0,0,.05); opacity: 1; }
+
+/* =========================
+   Adaptive trend charts - B / C
+========================= */
+.adaptive-trend-meta,
+.comparison-trend-meta { min-width: 88px; }
+
+.adaptive-trend {
+    position: relative;
+    min-height: 220px;
+    margin-top: 12px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+}
+
+.adaptive-trend-scale {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 164px;
+    pointer-events: none;
+}
+
+.adaptive-trend-scale-row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transform: translateY(-50%);
+}
+
+.adaptive-trend-scale-label {
+    width: 34px;
+    flex: 0 0 34px;
+    color: #A0A0A0;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.adaptive-trend-scale-line { flex: 1; border-top: 1px dashed #E7E7E7; }
+
+.adaptive-trend-bars {
+    position: relative;
+    z-index: 1;
+    min-width: 100%;
+    padding-left: 42px;
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+}
+
+.adaptive-trend[data-granularity="day"] .adaptive-trend-bars { min-width: max(100%, 520px); }
+
+.adaptive-trend-item {
+    min-width: 30px;
+    flex: 1;
+    display: grid;
+    grid-template-rows: 164px auto auto;
+    gap: 6px;
+    text-align: center;
+}
+
+.adaptive-trend-bar-area {
+    height: 164px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.adaptive-trend-bar {
+    width: min(32px, 72%);
+    height: 0;
+    border-radius: 8px 8px 0 0;
+    transition: height .25s ease;
+}
+.adaptive-trend-bar-accent { background: var(--accent); }
+.adaptive-trend-label { color: #6F6F6F; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.adaptive-trend-value { color: var(--ink); font-size: 13px; font-weight: 800; white-space: nowrap; }
+
+/* =========================
+   Dashboard D - comparison
+========================= */
+.comparison-summary-card { justify-content: flex-start; gap: 14px; }
+.summary-compare-list { display: grid; gap: 9px; margin-top: auto; }
+.summary-compare-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.summary-compare-row strong { font-size: 15px; color: var(--ink); }
+.summary-compare-name { color: var(--muted); font-size: 12px; font-weight: 700; }
+
+.comparison-metrics { display: grid; gap: 12px; }
+.comparison-category { padding: 14px; border: 1px solid #ECECEC; border-radius: 14px; background: #FCFCFC; }
+.comparison-category-head { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; margin-bottom: 9px; border-bottom: 1px solid #ECECEC; }
+.comparison-category-head strong { font-size: 14px; }
+.comparison-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
+.comparison-metric-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; }
+.comparison-metric-row span { color: var(--muted); font-size: 11px; }
+.comparison-metric-row strong { font-size: 12px; }
+
+.comparison-trend { position: relative; min-height: 240px; margin-top: 8px; overflow-x: auto; }
+.comparison-trend-legend { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.comparison-trend-legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.comparison-trend-legend i { width: 8px; height: 8px; border-radius: 50%; }
+.comparison-trend-scale { position: absolute; top: 28px; left: 0; right: 0; height: 164px; pointer-events: none; }
+.comparison-trend-scale-row { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 8px; transform: translateY(-50%); }
+.comparison-trend-scale-label { width: 34px; flex: 0 0 34px; color: #A0A0A0; font-size: 10px; font-weight: 600; }
+.comparison-trend-scale-line { flex: 1; border-top: 1px dashed #E7E7E7; }
+.comparison-trend-bars { position: relative; z-index: 1; min-width: 100%; padding: 28px 0 0 42px; display: flex; align-items: flex-start; gap: 8px; }
+.comparison-trend[data-granularity="day"] .comparison-trend-bars { min-width: max(100%, 520px); }
+.comparison-trend-group { min-width: 34px; flex: 1; display: grid; grid-template-rows: 164px auto; gap: 7px; text-align: center; }
+.comparison-trend-bar-group { height: 164px; display: flex; align-items: flex-end; justify-content: center; gap: 3px; }
+.comparison-trend-bar { width: min(15px, 42%); min-height: 0; border-radius: 6px 6px 0 0; transition: height .25s ease; }
+.comparison-trend-label { color: #6F6F6F; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+@media (max-width: 620px) {
+    .flash { width: 100%; }
+    .adaptive-trend-item { min-width: 28px; }
+    .comparison-trend-group { min-width: 32px; }
+}

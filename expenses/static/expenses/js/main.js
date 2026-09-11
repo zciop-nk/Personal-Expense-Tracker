@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initListPage();
     initFormCalendar();
     initCategoryCombobox();
+    initFlashMessages();
 });
 
 function openConfirmModal({
@@ -228,6 +229,8 @@ function decorateResults() {
 
     renderDescriptionDonut();
     renderSingleCategoryTrend();
+    renderAdaptiveTrendCharts();
+    renderComparisonDashboard();
 }
 
 function renderCategoryDonut() {
@@ -275,6 +278,7 @@ function renderTrendChart() {
     const chart = document.querySelector("#trendChart");
     const scale = document.querySelector("#trendScale");
     const yearLabel = document.querySelector("#trendYearLabel");
+    const unitBadge = chart?.closest(".dashboard-card")?.querySelector(".trend-unit");
 
     if (!chart || !scale) return;
 
@@ -290,19 +294,13 @@ function renderTrendChart() {
     const amounts = data.map((d) => d.amount);
     const maxAmount = Math.max(...amounts, 0);
 
-    // 눈금 단위 자동 계산
-    let unit = 10000;
-    if (maxAmount <= 10000) {
-        unit = 1000;
-    } else if (maxAmount <= 50000) {
-        unit = 5000;
-    } else if (maxAmount <= 100000) {
-        unit = 10000;
-    } else {
-        unit = 50000;
-    }
+    const displayUnit = getTrendDisplayUnit(maxAmount);
+    const topScaledValue = getNiceTrendTop(maxAmount, displayUnit.divisor);
+    const topValue = topScaledValue * displayUnit.divisor;
 
-    const topValue = Math.max(unit, Math.ceil(maxAmount / unit) * unit);
+    if (unitBadge) {
+        unitBadge.textContent = `단위: ${displayUnit.label}`;
+    }
 
     // 연도 표시
     const years = [...new Set(data.map((d) => d.monthKey.slice(0, 4)))];
@@ -326,7 +324,7 @@ function renderTrendChart() {
         row.style.top = `${(1 - ratio) * 100}%`;
 
         row.innerHTML = `
-            <span class="trend-scale-label">${(value / 10000).toFixed(1)}</span>
+            <span class="trend-scale-label">${(value / displayUnit.divisor).toFixed(displayUnit.decimals)}</span>
             <span class="trend-scale-line"></span>
         `;
 
@@ -346,7 +344,7 @@ function renderTrendChart() {
         }
 
         if (amountEl) {
-            amountEl.textContent = (amount / 10000).toFixed(1);
+            amountEl.textContent = (amount / displayUnit.divisor).toFixed(displayUnit.decimals);
         }
 
         if (bar) {
@@ -650,6 +648,216 @@ function renderDescriptionDonut() {
         `;
 
         legend.appendChild(row);
+    });
+}
+
+
+
+function initFlashMessages() {
+    const flashes = [...document.querySelectorAll("[data-flash-message]")];
+
+    flashes.forEach((flash) => {
+        const closeButton = flash.querySelector("[data-flash-close]");
+        let timer = null;
+
+        const dismiss = () => {
+            if (flash.classList.contains("is-hiding")) return;
+            flash.classList.add("is-hiding");
+            window.setTimeout(() => flash.remove(), 220);
+        };
+
+        closeButton?.addEventListener("click", () => {
+            if (timer) window.clearTimeout(timer);
+            dismiss();
+        });
+
+        timer = window.setTimeout(dismiss, 4200);
+    });
+}
+
+function getTrendDisplayUnit(maxAmount) {
+    if (maxAmount >= 10000) {
+        return { divisor: 10000, label: "만 원", decimals: 1 };
+    }
+    if (maxAmount >= 1000) {
+        return { divisor: 1000, label: "천 원", decimals: 1 };
+    }
+    return { divisor: 1, label: "원", decimals: 0 };
+}
+
+function getNiceTrendTop(maxAmount, divisor) {
+    const scaled = maxAmount / divisor;
+    if (scaled <= 0) return 1;
+    const magnitude = 10 ** Math.floor(Math.log10(scaled));
+    const normalized = scaled / magnitude;
+    let nice = 1;
+    if (normalized <= 1) nice = 1;
+    else if (normalized <= 2) nice = 2;
+    else if (normalized <= 5) nice = 5;
+    else nice = 10;
+    return nice * magnitude;
+}
+
+function formatAdaptivePeriodLabel(periods, granularity) {
+    if (!periods.length) return "";
+    const years = [...new Set(periods.map((period) => period.slice(0, 4)))];
+    if (granularity === "day") {
+        const months = [...new Set(periods.map((period) => period.slice(0, 7)))];
+        if (months.length === 1) {
+            const [year, month] = months[0].split("-");
+            return `${year}년 ${Number(month)}월`;
+        }
+    }
+    return years.length === 1 ? `${years[0]}년` : `${years[0]}–${years[years.length - 1]}년`;
+}
+
+function formatAdaptiveXAxis(period, granularity) {
+    if (granularity === "day") {
+        const [, month, day] = period.split("-");
+        return `${Number(month)}/${Number(day)}`;
+    }
+    const [, month] = period.split("-");
+    return `${Number(month)}월`;
+}
+
+function renderAdaptiveTrendCharts() {
+    document.querySelectorAll("[data-adaptive-trend]").forEach((chart) => {
+        const items = [...chart.querySelectorAll(".adaptive-trend-item")];
+        if (!items.length) return;
+
+        const card = chart.closest(".dashboard-card");
+        const periodLabel = card?.querySelector("[data-adaptive-period-label]");
+        const unitBadge = card?.querySelector("[data-adaptive-unit]");
+        const scale = chart.querySelector(".adaptive-trend-scale");
+        const granularity = chart.dataset.granularity || "month";
+        const colorKey = chart.dataset.colorKey;
+        const data = items.map((item) => ({
+            item,
+            period: item.dataset.period || "",
+            amount: Number(item.dataset.amount || 0),
+        }));
+        const maxAmount = Math.max(...data.map((row) => row.amount), 0);
+        const unit = getTrendDisplayUnit(maxAmount);
+        const top = getNiceTrendTop(maxAmount, unit.divisor);
+
+        if (periodLabel) periodLabel.textContent = formatAdaptivePeriodLabel(data.map((row) => row.period), granularity);
+        if (unitBadge) unitBadge.textContent = `단위: ${unit.label}`;
+
+        if (scale) {
+            scale.innerHTML = "";
+            [1, .75, .5, .25, 0].forEach((ratio) => {
+                const row = document.createElement("div");
+                row.className = "adaptive-trend-scale-row";
+                row.style.top = `${(1 - ratio) * 100}%`;
+                const value = top * ratio;
+                row.innerHTML = `<span class="adaptive-trend-scale-label">${value.toFixed(unit.decimals)}</span><span class="adaptive-trend-scale-line"></span>`;
+                scale.appendChild(row);
+            });
+        }
+
+        let solid = "#FFE860";
+        if (colorKey && colorKey !== "accent") {
+            [, , solid] = getCategoryPalette(colorKey);
+        }
+
+        data.forEach(({ item, period, amount }) => {
+            const label = item.querySelector(".adaptive-trend-label");
+            const value = item.querySelector(".adaptive-trend-value");
+            const bar = item.querySelector(".adaptive-trend-bar");
+            if (label) label.textContent = formatAdaptiveXAxis(period, granularity);
+            if (value) value.textContent = (amount / unit.divisor).toFixed(unit.decimals);
+            if (bar) {
+                bar.style.height = `${top ? ((amount / unit.divisor) / top) * 100 : 0}%`;
+                if (!bar.classList.contains("adaptive-trend-bar-accent")) bar.style.backgroundColor = solid;
+            }
+        });
+    });
+}
+
+function renderComparisonDashboard() {
+    document.querySelectorAll(".comparison-category[data-color-key]").forEach((card) => {
+        const [, , solid] = getCategoryPalette(card.dataset.colorKey);
+        const dot = card.querySelector(".comparison-dot");
+        if (dot) dot.style.backgroundColor = solid;
+    });
+
+    document.querySelectorAll("[data-comparison-trend]").forEach((chart) => {
+        const source = [...chart.querySelectorAll("[data-compare-point]")];
+        const categorySource = [...chart.querySelectorAll("[data-compare-category]")];
+        if (!source.length && !categorySource.length) return;
+
+        const granularity = chart.dataset.granularity || "month";
+        const card = chart.closest(".dashboard-card");
+        const periodLabel = card?.querySelector("[data-comparison-period-label]");
+        const unitBadge = card?.querySelector("[data-comparison-unit]");
+        const legend = chart.querySelector(".comparison-trend-legend");
+        const scale = chart.querySelector(".comparison-trend-scale");
+        const bars = chart.querySelector(".comparison-trend-bars");
+
+        const points = source.map((node) => ({
+            period: node.dataset.period || "",
+            name: node.dataset.name || "",
+            colorKey: node.dataset.colorKey || "",
+            amount: Number(node.dataset.amount || 0),
+        }));
+        const periods = [...new Set(points.map((p) => p.period))].sort();
+        const categorySeed = categorySource.length
+            ? categorySource.map((node) => ({ name: node.dataset.name || "", colorKey: node.dataset.colorKey || "" }))
+            : points.map((p) => ({ name: p.name, colorKey: p.colorKey }));
+        const categories = [...new Map(categorySeed.map((p) => [p.name, p])).values()];
+        const maxAmount = Math.max(...points.map((p) => p.amount), 0);
+        const unit = getTrendDisplayUnit(maxAmount);
+        const top = getNiceTrendTop(maxAmount, unit.divisor);
+
+        if (periodLabel) periodLabel.textContent = formatAdaptivePeriodLabel(periods, granularity);
+        if (unitBadge) unitBadge.textContent = `단위: ${unit.label}`;
+
+        if (legend) {
+            legend.innerHTML = categories.map((category) => {
+                const [, , solid] = getCategoryPalette(category.colorKey);
+                return `<span><i style="background:${solid}"></i>${category.name}</span>`;
+            }).join("");
+        }
+
+        if (scale) {
+            scale.innerHTML = "";
+            [1, .75, .5, .25, 0].forEach((ratio) => {
+                const value = top * ratio;
+                const row = document.createElement("div");
+                row.className = "comparison-trend-scale-row";
+                row.style.top = `${(1 - ratio) * 100}%`;
+                row.innerHTML = `<span class="comparison-trend-scale-label">${value.toFixed(unit.decimals)}</span><span class="comparison-trend-scale-line"></span>`;
+                scale.appendChild(row);
+            });
+        }
+
+        if (bars) {
+            bars.innerHTML = "";
+            periods.forEach((period) => {
+                const group = document.createElement("div");
+                group.className = "comparison-trend-group";
+                const barGroup = document.createElement("div");
+                barGroup.className = "comparison-trend-bar-group";
+
+                categories.forEach((category) => {
+                    const point = points.find((p) => p.period === period && p.name === category.name);
+                    const amount = point?.amount || 0;
+                    const [, , solid] = getCategoryPalette(category.colorKey);
+                    const bar = document.createElement("span");
+                    bar.className = "comparison-trend-bar";
+                    bar.style.height = `${top ? ((amount / unit.divisor) / top) * 100 : 0}%`;
+                    bar.style.backgroundColor = solid;
+                    bar.title = `${category.name} ${amount.toLocaleString("ko-KR")}원`;
+                    barGroup.appendChild(bar);
+                });
+
+                const label = document.createElement("span");
+                label.className = "comparison-trend-label";
+                label.textContent = formatAdaptiveXAxis(period, granularity);
+                group.append(barGroup, label);
+                bars.appendChild(group);
+            });
+        }
     });
 }
 

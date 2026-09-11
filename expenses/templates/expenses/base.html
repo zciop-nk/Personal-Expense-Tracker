@@ -45,10 +45,11 @@
 
     <main class="page-shell main-content">
         {% if messages %}
-            <div class="flash-stack">
+            <div class="flash-stack" aria-live="polite">
                 {% for message in messages %}
-                    <div class="flash {% if message.tags %}{{ message.tags }}{% endif %}">
-                        {{ message }}
+                    <div class="flash {% if message.tags %}{{ message.tags }}{% endif %}" data-flash-message>
+                        <span class="flash-message">{{ message }}</span>
+                        <button type="button" class="flash-close" data-flash-close aria-label="알림 닫기">×</button>
                     </div>
                 {% endfor %}
             </div>
