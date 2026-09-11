@@ -41,7 +41,11 @@
                     aria-haspopup="dialog"
                 >
                     <span id="formDateText">
-                        {% if form.date.value %}{{ form.date.value }}{% else %}연도-월-일{% endif %}
+                        {% if form.date.value %}
+                            {{ form.date.value }}
+                        {% else %}
+                            날짜를 선택해 주세요
+                        {% endif %}
                     </span>
                     <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
                         <rect x="3.5" y="5" width="17" height="15" rx="3"></rect>

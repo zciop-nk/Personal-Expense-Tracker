@@ -1084,8 +1084,18 @@ function initFormCalendar() {
     let viewDate = selected ? new Date(`${selected}T00:00:00`) : new Date();
 
     function syncText() {
-        text.textContent = selected || "연도-월-일";
-        text.style.color = selected ? "" : "#8B8B8B";
+        if (!selected) {
+            text.textContent = "날짜를 선택해 주세요";
+            text.style.color = "#8B8B8B";
+            return;
+        }
+
+        const [year, month, day] = selected.split("-");
+
+        text.textContent =
+            `${year}년 ${Number(month)}월 ${Number(day)}일`;
+
+        text.style.color = "";
     }
 
     function render() {

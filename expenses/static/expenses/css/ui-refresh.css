@@ -1,0 +1,246 @@
+/* SSEUM UI refresh v2: compact top area + side drawer + inline drawer date picker.
+   Loaded after style.css so it only overrides the parts redesigned here. */
+
+.site-header{background:rgba(255,255,255,.96)}
+.header-inner{min-height:64px}
+.header-add-button{min-height:38px;padding:0 16px;border-radius:999px}
+.main-content{padding-top:28px}
+
+/* -----------------------------------------------------
+   Compact hero
+   - Header already owns the primary create CTA.
+   - Dashboard below owns the data, so the hero stays quiet.
+----------------------------------------------------- */
+.hero-refresh{
+    display:block;
+    padding:22px 0 26px;
+}
+.hero-refresh .hero-copy-wrap{max-width:720px}
+.hero-refresh .eyebrow{margin-bottom:10px}
+.hero-refresh h1{
+    max-width:650px;
+    margin-bottom:13px;
+    font-size:clamp(34px,3.4vw,44px);
+    line-height:1.2;
+    letter-spacing:-.045em;
+}
+.hero-refresh .hero-copy{
+    max-width:620px;
+    margin-bottom:0;
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.7;
+}
+.filter-dock{position:relative;z-index:8}
+
+/* -----------------------------------------------------
+   Expense drawer
+----------------------------------------------------- */
+.expense-drawer-layer{position:fixed;inset:0;z-index:70}
+.expense-drawer-backdrop{position:absolute;inset:0;border:0;background:rgba(26,26,26,.08);cursor:default}
+.expense-drawer{
+    position:absolute;
+    top:0;
+    right:0;
+    width:min(430px,100vw);
+    height:100%;
+    background:#fff;
+    border-left:1px solid var(--line);
+    box-shadow:-20px 0 60px rgba(26,26,26,.12);
+    display:flex;
+    flex-direction:column;
+    transform:translateX(100%);
+    transition:transform .24s ease;
+}
+.expense-drawer-layer.is-open .expense-drawer{transform:translateX(0)}
+.expense-drawer-head{
+    padding:22px 24px 18px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:18px;
+}
+.expense-drawer-head h2{font-size:24px;line-height:1.25;margin:3px 0 7px;color:var(--ink)}
+.expense-drawer-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+.expense-drawer-eyebrow{font-size:10px!important;font-weight:800!important;letter-spacing:.12em!important;color:#9A9A9A!important}
+.expense-drawer-close{
+    width:36px;
+    height:36px;
+    border:1px solid var(--line);
+    border-radius:50%;
+    background:#fff;
+    color:#666;
+    font-size:22px;
+    line-height:1;
+    flex:0 0 auto;
+}
+.expense-drawer-close:hover{background:var(--surface-soft);color:var(--ink)}
+.expense-drawer-body{position:relative;flex:1;overflow:auto;padding:22px 24px 32px}
+.expense-drawer-loading{padding:46px 0;text-align:center;color:var(--muted);font-size:13px}
+.expense-drawer .expense-form{margin:0;border:0;box-shadow:none;padding:0;background:transparent}
+.expense-drawer .form-grid{grid-template-columns:1fr;gap:18px}
+.expense-drawer .field-group.full{grid-column:auto}
+.expense-drawer .form-actions{
+    position:sticky;
+    bottom:-32px;
+    margin:28px -24px -32px;
+    padding:16px 24px 20px;
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    z-index:3;
+}
+.expense-drawer .form-actions .secondary-button{cursor:pointer}
+.expense-drawer-error{padding:14px 16px;border:1px solid #F1CACA;border-radius:12px;background:#FFF5F5;color:#9A3F3F;font-size:13px;line-height:1.55}
+
+/* Creation date placeholder */
+.expense-drawer #formDateText.is-placeholder{color:#8B8B8B!important}
+
+/* -----------------------------------------------------
+   Drawer date picker
+   Date opens exactly like the category dropdown: directly
+   below the date input. No full drawer overlay / blur.
+----------------------------------------------------- */
+.expense-drawer .field-group:has([data-form-date-trigger]){
+    position:relative;
+    z-index:12;
+}
+.expense-drawer .calendar-popover.drawer-field-calendar{
+    position:absolute;
+    inset:auto;
+    top:calc(100% + 8px);
+    left:0;
+    width:100%;
+    padding:0;
+    display:block;
+    background:transparent;
+    backdrop-filter:none;
+    z-index:30;
+}
+.expense-drawer .calendar-popover.drawer-field-calendar[hidden]{display:none!important}
+.expense-drawer .drawer-field-calendar .calendar-card{
+    width:100%;
+    max-width:none;
+    padding:14px;
+    border-radius:17px;
+    border:1px solid #E2E2E2;
+    box-shadow:0 16px 38px rgba(26,26,26,.11);
+}
+.expense-drawer .drawer-field-calendar .calendar-head{
+    grid-template-columns:36px 1fr 36px;
+    margin-bottom:10px;
+}
+.expense-drawer .drawer-field-calendar .calendar-nav{
+    width:36px;
+    height:36px;
+    border-radius:11px;
+    font-size:21px;
+}
+.expense-drawer .drawer-field-calendar .calendar-weekdays,
+.expense-drawer .drawer-field-calendar .calendar-grid{gap:2px}
+.expense-drawer .drawer-field-calendar .calendar-weekdays{margin-bottom:2px;font-size:11px}
+.expense-drawer .drawer-field-calendar .calendar-weekdays span{padding:4px 0}
+.expense-drawer .drawer-field-calendar .calendar-day{
+    border-radius:9px;
+    font-size:13px;
+}
+.expense-drawer .drawer-field-calendar .calendar-footer{
+    margin-top:11px;
+    gap:7px;
+}
+.expense-drawer .drawer-field-calendar .calendar-footer .primary-button,
+.expense-drawer .drawer-field-calendar .calendar-footer .secondary-button{
+    min-height:38px;
+    padding:0 14px;
+    border-radius:11px;
+    font-size:13px;
+}
+
+/* -----------------------------------------------------
+   Selected list row
+   Indicator is flush with the left edge of the list panel.
+----------------------------------------------------- */
+.expense-row.is-drawer-active{
+    position:relative;
+    margin-left:-26px;
+    width:calc(100% + 26px);
+    padding-left:26px;
+    background:linear-gradient(90deg,rgba(255,232,96,.16) 0%,rgba(255,232,96,.07) 42%,rgba(255,255,255,0) 82%);
+}
+.expense-row.is-drawer-active::before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:3px;
+    border-radius:0 3px 3px 0;
+    background:var(--accent);
+}
+
+/* -----------------------------------------------------
+   Success toast
+----------------------------------------------------- */
+.expense-drawer-toast{
+    position:fixed;
+    top:80px;
+    right:20px;
+    z-index:110;
+    min-width:230px;
+    max-width:min(360px,calc(100vw - 32px));
+    padding:12px 15px;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    border:1px solid #E5D875;
+    border-radius:14px;
+    background:#FFF9D8;
+    color:#4A431E;
+    box-shadow:0 13px 34px rgba(26,26,26,.10);
+    font-size:13px;
+    font-weight:750;
+    animation:drawerToastIn .22s ease both;
+}
+.expense-drawer-toast::before{content:"";width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:var(--accent)}
+.expense-drawer-toast.is-hiding{animation:drawerToastOut .2s ease both}
+@keyframes drawerToastIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes drawerToastOut{to{opacity:0;transform:translateY(-6px)}}
+
+/* Unsaved-change modal must sit above the drawer. */
+.app-modal{z-index:90}
+
+/* -----------------------------------------------------
+   Desktop: keep the transaction list visible.
+----------------------------------------------------- */
+@media (min-width:1200px){
+    body.expense-drawer-open .header-inner,
+    body.expense-drawer-open .main-content{
+        width:auto;
+        max-width:1180px;
+        margin-left:32px;
+        margin-right:462px;
+        transition:margin .24s ease,width .24s ease;
+    }
+    body.expense-drawer-open .content-grid{grid-template-columns:1fr}
+    body.expense-drawer-open .content-grid>.panel{grid-column:auto}
+    body.expense-drawer-open .content-grid>.side-stack{display:none}
+    body.expense-drawer-open .summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+    /* No page-blocking backdrop on desktop. */
+    .expense-drawer-layer{pointer-events:none}
+    .expense-drawer{pointer-events:auto}
+    .expense-drawer-backdrop{pointer-events:none;background:transparent}
+}
+
+@media (max-width:640px){
+    .main-content{padding-top:20px}
+    .hero-refresh{padding:16px 0 22px}
+    .hero-refresh h1{font-size:34px}
+    .expense-drawer{width:100%}
+    .expense-drawer-head{padding:20px 20px 17px}
+    .expense-drawer-body{padding:20px 20px 28px}
+    .expense-drawer .form-actions{margin-left:-20px;margin-right:-20px;margin-bottom:-28px;padding-left:20px;padding-right:20px}
+    .expense-drawer-backdrop{background:rgba(26,26,26,.18)}
+    .expense-drawer-toast{top:72px;right:14px;left:14px;max-width:none}
+}
