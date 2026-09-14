@@ -5,29 +5,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}씀 / SSEUM{% endblock %}</title>
+
     <link rel="icon" type="image/png" href="{% static 'expenses/images/favicon-sseum.png' %}">
     <link rel="apple-touch-icon" href="{% static 'expenses/images/favicon-sseum.png' %}">
+
     <link rel="stylesheet" href="{% static 'expenses/css/style.css' %}">
     <link rel="stylesheet" href="{% static 'expenses/css/ui-refresh.css' %}">
+    <link rel="stylesheet" href="{% static 'expenses/css/chart-polish.css' %}">
+
     <script src="{% static 'expenses/js/main.js' %}" defer></script>
+    <script src="{% static 'expenses/js/chart-polish.js' %}" defer></script>
     <script src="{% static 'expenses/js/expense-drawer.js' %}" defer></script>
 </head>
+
 <body>
     <header class="site-header">
         <div class="page-shell header-inner">
             <a class="brand" href="{% url 'expense_list' %}" aria-label="씀 SSEUM 홈">
-                <img class="brand-logo" src="{% static 'expenses/images/logo-sseum-horizontal.png' %}" alt="씀 SSEUM">
+                <img
+                    class="brand-logo"
+                    src="{% static 'expenses/images/logo-sseum-horizontal.png' %}"
+                    alt="씀 SSEUM"
+                >
             </a>
-            <a class="primary-button compact header-add-button" href="{% url 'expense_create' %}" data-expense-drawer-link>+ 지출 기록</a>
+
+            <a
+                class="primary-button compact header-add-button"
+                href="{% url 'expense_create' %}"
+                data-expense-drawer-link
+            >
+                + 지출 기록
+            </a>
         </div>
     </header>
 
     {% if messages %}
         <div class="flash-stack" aria-live="polite" aria-atomic="true">
             {% for message in messages %}
-                <div class="flash {% if message.tags %}{{ message.tags }}{% endif %}" data-flash-message>
+                <div
+                    class="flash {% if message.tags %}{{ message.tags }}{% endif %}"
+                    data-flash-message
+                >
                     <span class="flash-message">{{ message }}</span>
-                    <button type="button" class="flash-close" data-flash-close aria-label="알림 닫기">×</button>
+                    <button
+                        type="button"
+                        class="flash-close"
+                        data-flash-close
+                        aria-label="알림 닫기"
+                    >×</button>
                 </div>
             {% endfor %}
         </div>
@@ -38,33 +63,93 @@
     </main>
 
     <div class="expense-drawer-layer" id="expenseDrawerLayer" hidden>
-        <button class="expense-drawer-backdrop" type="button" data-drawer-close aria-label="지출 입력 닫기"></button>
-        <aside class="expense-drawer" id="expenseDrawer" aria-hidden="true" aria-labelledby="expenseDrawerTitle">
+        <button
+            class="expense-drawer-backdrop"
+            type="button"
+            data-drawer-close
+            aria-label="지출 입력 닫기"
+        ></button>
+
+        <aside
+            class="expense-drawer"
+            id="expenseDrawer"
+            aria-hidden="true"
+            aria-labelledby="expenseDrawerTitle"
+        >
             <div class="expense-drawer-head">
                 <div>
-                    <p class="expense-drawer-eyebrow" id="expenseDrawerEyebrow">CREATE</p>
-                    <h2 id="expenseDrawerTitle">새 지출 기록</h2>
-                    <p id="expenseDrawerDescription">목록을 보면서 필요한 지출만 빠르게 기록해요.</p>
+                    <p class="expense-drawer-eyebrow" id="expenseDrawerEyebrow">
+                        CREATE
+                    </p>
+
+                    <h2 id="expenseDrawerTitle">
+                        새 지출 기록
+                    </h2>
+
+                    <p id="expenseDrawerDescription">
+                        목록을 보면서 필요한 지출만 빠르게 기록해요.
+                    </p>
                 </div>
-                <button type="button" class="expense-drawer-close" data-drawer-close aria-label="닫기">×</button>
+
+                <button
+                    type="button"
+                    class="expense-drawer-close"
+                    data-drawer-close
+                    aria-label="닫기"
+                >×</button>
             </div>
+
             <div class="expense-drawer-body" id="expenseDrawerBody">
-                <div class="expense-drawer-loading">불러오는 중...</div>
+                <div class="expense-drawer-loading">
+                    불러오는 중...
+                </div>
             </div>
         </aside>
     </div>
 
     <div class="app-modal" id="appModal" hidden aria-hidden="true">
         <div class="app-modal-backdrop" data-modal-close></div>
-        <div class="app-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="appModalTitle">
-            <button type="button" class="app-modal-close" id="appModalClose" aria-label="닫기">×</button>
+
+        <div
+            class="app-modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="appModalTitle"
+        >
+            <button
+                type="button"
+                class="app-modal-close"
+                id="appModalClose"
+                aria-label="닫기"
+            >×</button>
+
             <div class="app-modal-content">
-                <div class="app-modal-title" id="appModalTitle">확인이 필요해요</div>
-                <div class="app-modal-message" id="appModalMessage"></div>
+                <div class="app-modal-title" id="appModalTitle">
+                    확인이 필요해요
+                </div>
+
+                <div
+                    class="app-modal-message"
+                    id="appModalMessage"
+                ></div>
             </div>
+
             <div class="app-modal-actions">
-                <button type="button" class="app-modal-button app-modal-button-secondary" id="appModalCancel">취소</button>
-                <button type="button" class="app-modal-button app-modal-button-danger" id="appModalConfirm">확인</button>
+                <button
+                    type="button"
+                    class="app-modal-button app-modal-button-secondary"
+                    id="appModalCancel"
+                >
+                    취소
+                </button>
+
+                <button
+                    type="button"
+                    class="app-modal-button app-modal-button-danger"
+                    id="appModalConfirm"
+                >
+                    확인
+                </button>
             </div>
         </div>
     </div>

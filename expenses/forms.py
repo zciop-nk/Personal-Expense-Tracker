@@ -1,4 +1,5 @@
 from django import forms
+
 from .models import Expense
 
 
@@ -18,13 +19,13 @@ class ExpenseForm(forms.ModelForm):
                     "maxlength": 80,
                 }
             ),
-
             "amount": forms.NumberInput(
                 attrs={
                     "class": "form-control amount-input",
                     "min": 1,
                     "step": 1,
                     "placeholder": "0",
+                    "autocomplete": "off",
                 }
             ),
         }

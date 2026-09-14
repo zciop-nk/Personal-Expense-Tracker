@@ -1,0 +1,71 @@
+/*
+=========================================================
+SSEUM Chart Polish
+---------------------------------------------------------
+1) 소량의 일별 데이터에서 불필요한 가로 스크롤 제거
+2) 실제로 데이터가 많을 때만 JS가 스크롤 모드 활성화
+3) adaptive / comparison 추이 차트에 동일 적용
+=========================================================
+*/
+
+/* 기존 style.css의 고정 520px 강제값을 해제합니다. */
+.adaptive-trend[data-granularity="day"] .adaptive-trend-bars,
+.comparison-trend[data-granularity="day"] .comparison-trend-bars {
+    min-width: 100%;
+}
+
+/* 소량 데이터는 카드 안에서 완전히 맞춰 보여줍니다. */
+.adaptive-trend:not(.is-trend-scrollable),
+.comparison-trend:not(.is-trend-scrollable) {
+    overflow-x: hidden;
+}
+
+/* 실제 데이터가 많은 경우에만 스크롤을 허용합니다. */
+.adaptive-trend.is-trend-scrollable,
+.comparison-trend.is-trend-scrollable {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #B6B6B6 transparent;
+}
+
+/* WebKit scrollbar는 너무 두껍지 않게 정리 */
+.adaptive-trend.is-trend-scrollable::-webkit-scrollbar,
+.comparison-trend.is-trend-scrollable::-webkit-scrollbar {
+    height: 6px;
+}
+
+.adaptive-trend.is-trend-scrollable::-webkit-scrollbar-track,
+.comparison-trend.is-trend-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.adaptive-trend.is-trend-scrollable::-webkit-scrollbar-thumb,
+.comparison-trend.is-trend-scrollable::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #B6B6B6;
+}
+
+/*
+두세 개 데이터일 때 막대가 한쪽에 몰리지 않도록
+각 항목이 남은 영역을 균등하게 사용합니다.
+*/
+.adaptive-trend:not(.is-trend-scrollable) .adaptive-trend-item,
+.comparison-trend:not(.is-trend-scrollable) .comparison-trend-group {
+    flex: 1 1 0;
+}
+
+/* 도넛 애니메이션 중 회색 잔여 영역이 너무 진하지 않게 */
+.donut-chart,
+.description-donut {
+    background-color: #F1F1F1;
+}
+
+
+/* conic-gradient 경계 anti-aliasing 안정화 */
+.donut-chart,
+.description-donut {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: background;
+}

@@ -46,7 +46,7 @@
     height:100%;
     background:#fff;
     border-left:1px solid var(--line);
-    box-shadow:-20px 0 60px rgba(26,26,26,.12);
+    box-shadow:-10px 0 28px rgba(26,26,26,.07);
     display:flex;
     flex-direction:column;
     transform:translateX(100%);
@@ -125,7 +125,7 @@
     padding:14px;
     border-radius:17px;
     border:1px solid #E2E2E2;
-    box-shadow:0 16px 38px rgba(26,26,26,.11);
+    box-shadow:0 10px 26px rgba(26,26,26,.08);
 }
 .expense-drawer .drawer-field-calendar .calendar-head{
     grid-template-columns:36px 1fr 36px;
@@ -214,23 +214,54 @@
    Desktop: keep the transaction list visible.
 ----------------------------------------------------- */
 @media (min-width:1200px){
+    /*
+     * Drawer가 열린 desktop 화면은 두 영역으로 봅니다.
+     *
+     * [메인 작업 영역] 24px [Drawer 430px]
+     *
+     * 기존 page-shell의 1180px 제한을 그대로 두면
+     * 넓은 모니터에서 메인과 Drawer 사이에 큰 회색 공백이 생깁니다.
+     * Drawer가 열려 있는 동안만 메인이 남은 왼쪽 공간을 사용하도록
+     * 최대 너비 제한을 풀고, Drawer 앞에 24px gutter만 남깁니다.
+     */
     body.expense-drawer-open .header-inner,
     body.expense-drawer-open .main-content{
         width:auto;
-        max-width:1180px;
-        margin-left:32px;
-        margin-right:462px;
-        transition:margin .24s ease,width .24s ease;
-    }
-    body.expense-drawer-open .content-grid{grid-template-columns:1fr}
-    body.expense-drawer-open .content-grid>.panel{grid-column:auto}
-    body.expense-drawer-open .content-grid>.side-stack{display:none}
-    body.expense-drawer-open .summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+        max-width:none;
 
-    /* No page-blocking backdrop on desktop. */
+        margin-left:24px;
+        margin-right:454px;
+
+        transition:
+            margin-right .22s ease,
+            width .22s ease;
+    }
+
+    /*
+     * Drawer가 우측 분석 카드 영역을 대신하고 있으므로
+     * 열려 있는 동안에는 side dashboard를 숨기고
+     * 지출 목록을 남은 main 영역 전체로 확장합니다.
+     */
+    body.expense-drawer-open .content-grid{
+        grid-template-columns:minmax(0,1fr);
+    }
+
+    body.expense-drawer-open .content-grid > .panel{
+        grid-column:auto;
+        width:100%;
+    }
+
+    body.expense-drawer-open .content-grid > .side-stack{
+        display:none;
+    }
+
     .expense-drawer-layer{pointer-events:none}
     .expense-drawer{pointer-events:auto}
-    .expense-drawer-backdrop{pointer-events:none;background:transparent}
+
+    .expense-drawer-backdrop{
+        pointer-events:none;
+        background:transparent;
+    }
 }
 
 @media (max-width:640px){
@@ -243,4 +274,435 @@
     .expense-drawer .form-actions{margin-left:-20px;margin-right:-20px;margin-bottom:-28px;padding-left:20px;padding-right:20px}
     .expense-drawer-backdrop{background:rgba(26,26,26,.18)}
     .expense-drawer-toast{top:72px;right:14px;left:14px;max-width:none}
+}
+
+
+/* =====================================================
+   Drawer form polish v3
+   - 날짜: 선택 후 한국식 표기 + 진한 색
+   - 카테고리: 선택 색상 dot 표시
+   - 내용 input: 브라우저 autofill/focus의 파란 배경 제거
+   - 금액: number spinner 화살표 제거
+===================================================== */
+
+/* 날짜 */
+.expense-drawer #formDateText {
+    color: var(--text) !important;
+    font-weight: 400;
+}
+
+.expense-drawer #formDateText.is-placeholder {
+    color: #8B8B8B !important;
+    font-weight: 400;
+}
+
+/* 날짜를 클릭하면 바로 확정되므로 별도 '확인' 버튼은 숨깁니다. */
+.expense-drawer #formCalendarClose {
+    display: none !important;
+}
+
+.expense-drawer .drawer-field-calendar .calendar-footer {
+    justify-content: flex-end;
+}
+
+/* 카테고리 선택 dot */
+.expense-drawer .category-input-wrap {
+    position: relative;
+}
+
+.expense-drawer .drawer-category-selected-dot {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+
+    width: 8px;
+    height: 8px;
+
+    transform: translateY(-50%);
+
+    border-radius: 50%;
+
+    z-index: 2;
+    pointer-events: none;
+}
+
+.expense-drawer .category-input-wrap.has-selected-category .category-search-input {
+    /* dot 오른쪽에서 약 11px 간격 */
+    padding-left: 37px;
+}
+
+/* Drawer 입력 필드는 항상 흰색 기반으로 유지 */
+.expense-drawer .form-control,
+.expense-drawer .form-date-trigger,
+.expense-drawer .category-search-input {
+    background: #FFFFFF !important;
+}
+
+/*
+Chrome / Edge autofill이 내용 input을 파랗거나 색 있는 배경으로
+덮어쓰는 현상을 Drawer 안에서만 제거합니다.
+*/
+.expense-drawer input:-webkit-autofill,
+.expense-drawer input:-webkit-autofill:hover,
+.expense-drawer input:-webkit-autofill:focus,
+.expense-drawer input:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--text) !important;
+    -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+    box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+    caret-color: var(--text);
+    transition: background-color 9999s ease-out 0s;
+}
+
+/* focus도 배경색은 그대로, 테두리만 강조 */
+.expense-drawer .form-control:focus,
+.expense-drawer .form-date-trigger:focus,
+.expense-drawer .category-search-input:focus {
+    background: #FFFFFF !important;
+}
+
+/* 금액 input의 의미 없는 위/아래 spinner 제거 */
+.expense-drawer input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.expense-drawer input[type="number"]::-webkit-inner-spin-button,
+.expense-drawer input[type="number"]::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+
+/* =====================================================
+   Calendar UX polish v8
+===================================================== */
+
+/* 메인 기간 선택 달력의 Drawer 스타일 X 버튼 */
+#calendarPopover .calendar-card.has-calendar-dialog-close {
+    position: relative;
+}
+
+#calendarPopover
+.calendar-card.has-calendar-dialog-close
+.calendar-head {
+    padding-right: 48px;
+}
+
+.calendar-dialog-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+
+    width: 42px;
+    height: 42px;
+
+    display: inline-grid;
+    place-items: center;
+
+    border: 1px solid var(--line);
+    border-radius: 50%;
+
+    background: #FFFFFF;
+    color: #666666;
+
+    font-size: 24px;
+    font-weight: 300;
+    line-height: 1;
+
+    z-index: 3;
+}
+
+.calendar-dialog-close:hover {
+    background: var(--surface-soft);
+    color: var(--ink);
+}
+
+
+/* Drawer: 2026년 9월 title 자체가 빠른 연/월 선택 버튼 */
+.expense-drawer
+.drawer-calendar-title-button {
+    padding: 6px 10px;
+
+    border-radius: 9px;
+
+    cursor: pointer;
+
+    transition:
+        background .15s ease,
+        color .15s ease;
+}
+
+.expense-drawer
+.drawer-calendar-title-button:hover,
+.expense-drawer
+.drawer-calendar-title-button:focus-visible {
+    background: var(--surface-soft);
+    outline: none;
+}
+
+
+/* 연도 / 월 빠른 이동 panel */
+.expense-drawer .calendar-card {
+    position: relative;
+}
+
+.expense-drawer .drawer-calendar-jump {
+    position: absolute;
+    inset: 0;
+
+    padding: 14px;
+
+    border-radius: 17px;
+
+    background: #FFFFFF;
+
+    z-index: 7;
+}
+
+.expense-drawer
+.drawer-calendar-jump[hidden] {
+    display: none !important;
+}
+
+.drawer-calendar-jump-head {
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 12px;
+}
+
+.drawer-calendar-jump-nav {
+    width: 36px;
+    height: 36px;
+
+    border: 1px solid #E1E1E1;
+    border-radius: 11px;
+
+    background: #FFFFFF;
+    color: var(--ink);
+
+    font-size: 20px;
+}
+
+.drawer-calendar-jump-year {
+    min-height: 36px;
+
+    border: 0;
+    border-radius: 10px;
+
+    background: transparent;
+    color: var(--ink);
+
+    font-weight: 800;
+}
+
+.drawer-calendar-jump-year:hover {
+    background: var(--surface-soft);
+}
+
+.drawer-calendar-jump-range {
+    text-align: center;
+    color: var(--ink);
+
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.drawer-calendar-month-grid,
+.drawer-calendar-year-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+}
+
+.drawer-calendar-month,
+.drawer-calendar-year {
+    min-height: 45px;
+
+    border: 1px solid transparent;
+    border-radius: 11px;
+
+    background: #F8F8F8;
+    color: #555555;
+
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.drawer-calendar-month:hover,
+.drawer-calendar-year:hover {
+    border-color: #D7D7D7;
+    background: #FFFFFF;
+    color: var(--ink);
+}
+
+.drawer-calendar-month.is-current,
+.drawer-calendar-year.is-current {
+    border-color: #E8CE3E;
+    background: #FFF8CC;
+    color: var(--ink);
+}
+
+
+/* =========================================
+   FINAL HERO - balanced editorial
+========================================= */
+
+.hero-editorial-final {
+    padding: 30px 0 24px;
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 140px;
+    align-items: center;
+    gap: 42px;
+
+    border-bottom: 1px solid rgba(26, 26, 26, .08);
+}
+
+.hero-editorial-copy {
+    min-width: 0;
+}
+
+.hero-editorial-eyebrow {
+    margin: 0 0 13px;
+
+    color: #8C8C8C;
+
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .1em;
+}
+
+
+/* 전체 타이틀 */
+.hero-editorial-title {
+    margin: 0;
+
+    display: grid;
+    gap: 3px;
+
+    color: var(--ink);
+    letter-spacing: -.045em;
+}
+
+
+/* 첫째 줄 */
+.hero-line-small {
+    display: block;
+
+    font-size: clamp(27px, 2.5vw, 34px);
+    font-weight: 820;
+    line-height: 1.16;
+}
+
+
+/* 둘째 줄 */
+.hero-line-large {
+    display: block;
+
+    font-size: clamp(42px, 4vw, 54px);
+    font-weight: 900;
+    line-height: 1.06;
+}
+
+
+/* 형광펜 */
+.hero-highlight-block {
+    position: relative;
+    display: inline-block;
+
+    z-index: 0;
+}
+
+.hero-highlight-block::after {
+    content: "";
+
+    position: absolute;
+
+    left: -4px;
+    right: -4px;
+    bottom: 2px;
+
+    height: 15px;
+
+    background: #FFE860;
+
+    border-radius: 0;
+
+    z-index: -1;
+}
+
+
+/* 제목 밑에 아주 짧은 accent */
+.hero-bottom-accent {
+    width: 42px;
+    height: 5px;
+
+    display: block;
+
+    margin-top: 17px;
+
+    background: var(--accent);
+}
+
+
+/* 오른쪽 로고 */
+.hero-editorial-logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.hero-editorial-logo {
+    width: 88px;
+    height: auto;
+
+    display: block;
+}
+
+
+/* 필터와 간격 */
+.hero-editorial-final + .filter-dock {
+    margin-top: 18px;
+}
+
+
+/* responsive */
+@media (max-width: 860px) {
+    .hero-editorial-final {
+        grid-template-columns: 1fr auto;
+        gap: 24px;
+
+        padding-top: 24px;
+    }
+
+    .hero-editorial-logo {
+        width: 70px;
+    }
+
+    .hero-line-small {
+        font-size: 26px;
+    }
+
+    .hero-line-large {
+        font-size: 42px;
+    }
+}
+
+@media (max-width: 600px) {
+    .hero-editorial-final {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .hero-editorial-logo-wrap {
+        justify-content: flex-start;
+    }
+
+    .hero-editorial-logo {
+        width: 64px;
+    }
 }

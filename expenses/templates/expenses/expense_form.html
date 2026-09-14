@@ -133,7 +133,25 @@
 
             <div class="field-group full">
                 <label class="field-label" for="{{ form.description.id_for_label }}">내용</label>
-                {{ form.description }}
+                <input
+                    type="text"
+                    id="descriptionDisplay"
+                    class="form-control"
+                    placeholder="예: 점심"
+                    maxlength="80"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    value="{{ form.description.value|default:'' }}"
+                >
+
+                <input
+                    type="hidden"
+                    id="id_description"
+                    name="description"
+                    value="{{ form.description.value|default:'' }}"
+                >
                 {% for error in form.description.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
             </div>
 
