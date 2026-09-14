@@ -75,26 +75,13 @@ button{cursor:pointer}
 
 .main-content{padding:42px 0 80px}
 
-.hero{
-    display:grid;
-    grid-template-columns:minmax(0,1fr) 168px;
-    align-items:center;
-    gap:32px;
-    padding:18px 0 28px
-}
 
-.hero-copy-wrap{min-width:0}
 
-.hero-brand-card{
-    width:168px;height:168px;
-    display:grid;place-items:center;
-    justify-self:end;
-    border-radius:34px;
-    background:var(--accent);
-    overflow:hidden
-}
 
-.hero-brand-symbol{width:112px;height:112px;object-fit:contain}
+
+
+
+
 
 .eyebrow{
     margin:0 0 8px;
@@ -122,12 +109,7 @@ h2{
     color:var(--ink)
 }
 
-.hero-copy,.form-heading>div>p:last-child{
-    margin-bottom:0;
-    font-size:16px;
-    line-height:24px;
-    color:var(--muted)
-}
+
 
 /* Dashboard */
 .summary-grid{
@@ -505,12 +487,12 @@ h2{
 
 /* 지출 내역 = 상단 카드 2칸 너비 */
 .content-grid > .panel {
-    grid-column: span 2;
+    grid-column: auto;
 }
 
 /* 우측 대시보드 = 상단 카드 1칸 너비 */
 .content-grid > .side-stack {
-    grid-column: span 1;
+    grid-column: auto;
 }
 
 .side-stack {
@@ -1891,3 +1873,725 @@ h2{
     .adaptive-trend-item { min-width: 28px; }
     .comparison-trend-group { min-width: 32px; }
 }
+
+/* SSEUM UI refresh v2: compact top area + side drawer + inline drawer date picker.
+   Loaded after style.css so it only overrides the parts redesigned here. */
+
+.site-header{background:rgba(255,255,255,.96)}
+.header-inner{min-height:64px}
+.header-add-button{min-height:38px;padding:0 16px;border-radius:999px}
+.main-content{padding-top:28px}
+
+/* -----------------------------------------------------
+   Compact hero
+   - Header already owns the primary create CTA.
+   - Dashboard below owns the data, so the hero stays quiet.
+----------------------------------------------------- */
+
+
+
+
+
+.filter-dock{position:relative;z-index:8}
+
+/* -----------------------------------------------------
+   Expense drawer
+----------------------------------------------------- */
+.expense-drawer-layer{position:fixed;inset:0;z-index:70}
+.expense-drawer-backdrop{position:absolute;inset:0;border:0;background:rgba(26,26,26,.08);cursor:default}
+.expense-drawer{
+    position:absolute;
+    top:0;
+    right:0;
+    width:min(430px,100vw);
+    height:100%;
+    background:#fff;
+    border-left:1px solid var(--line);
+    box-shadow:-10px 0 28px rgba(26,26,26,.07);
+    display:flex;
+    flex-direction:column;
+    transform:translateX(100%);
+    transition:transform .24s ease;
+}
+.expense-drawer-layer.is-open .expense-drawer{transform:translateX(0)}
+.expense-drawer-head{
+    padding:22px 24px 18px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:18px;
+}
+.expense-drawer-head h2{font-size:24px;line-height:1.25;margin:3px 0 7px;color:var(--ink)}
+.expense-drawer-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+.expense-drawer-eyebrow{font-size:10px!important;font-weight:800!important;letter-spacing:.12em!important;color:#9A9A9A!important}
+.expense-drawer-close{
+    width:36px;
+    height:36px;
+    border:1px solid var(--line);
+    border-radius:50%;
+    background:#fff;
+    color:#666;
+    font-size:22px;
+    line-height:1;
+    flex:0 0 auto;
+}
+.expense-drawer-close:hover{background:var(--surface-soft);color:var(--ink)}
+.expense-drawer-body{position:relative;flex:1;overflow:auto;padding:22px 24px 32px}
+.expense-drawer-loading{padding:46px 0;text-align:center;color:var(--muted);font-size:13px}
+.expense-drawer .expense-form{margin:0;border:0;box-shadow:none;padding:0;background:transparent}
+.expense-drawer .form-grid{grid-template-columns:1fr;gap:18px}
+.expense-drawer .field-group.full{grid-column:auto}
+.expense-drawer .form-actions{
+    position:sticky;
+    bottom:-32px;
+    margin:28px -24px -32px;
+    padding:16px 24px 20px;
+    background:rgba(255,255,255,.96);
+    backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    z-index:3;
+}
+.expense-drawer .form-actions .secondary-button{cursor:pointer}
+.expense-drawer-error{padding:14px 16px;border:1px solid #F1CACA;border-radius:12px;background:#FFF5F5;color:#9A3F3F;font-size:13px;line-height:1.55}
+
+/* Creation date placeholder */
+.expense-drawer #formDateText.is-placeholder{color:#8B8B8B!important}
+
+/* -----------------------------------------------------
+   Drawer date picker
+   Date opens exactly like the category dropdown: directly
+   below the date input. No full drawer overlay / blur.
+----------------------------------------------------- */
+.expense-drawer .field-group:has([data-form-date-trigger]){
+    position:relative;
+    z-index:12;
+}
+.expense-drawer .calendar-popover.drawer-field-calendar{
+    position:absolute;
+    inset:auto;
+    top:calc(100% + 8px);
+    left:0;
+    width:100%;
+    padding:0;
+    display:block;
+    background:transparent;
+    backdrop-filter:none;
+    z-index:30;
+}
+.expense-drawer .calendar-popover.drawer-field-calendar[hidden]{display:none!important}
+.expense-drawer .drawer-field-calendar .calendar-card{
+    width:100%;
+    max-width:none;
+    padding:14px;
+    border-radius:17px;
+    border:1px solid #E2E2E2;
+    box-shadow:0 10px 26px rgba(26,26,26,.08);
+}
+.expense-drawer .drawer-field-calendar .calendar-head{
+    grid-template-columns:36px 1fr 36px;
+    margin-bottom:10px;
+}
+.expense-drawer .drawer-field-calendar .calendar-nav{
+    width:36px;
+    height:36px;
+    border-radius:11px;
+    font-size:21px;
+}
+.expense-drawer .drawer-field-calendar .calendar-weekdays,
+.expense-drawer .drawer-field-calendar .calendar-grid{gap:2px}
+.expense-drawer .drawer-field-calendar .calendar-weekdays{margin-bottom:2px;font-size:11px}
+.expense-drawer .drawer-field-calendar .calendar-weekdays span{padding:4px 0}
+.expense-drawer .drawer-field-calendar .calendar-day{
+    border-radius:9px;
+    font-size:13px;
+}
+.expense-drawer .drawer-field-calendar .calendar-footer{
+    margin-top:11px;
+    gap:7px;
+}
+.expense-drawer .drawer-field-calendar .calendar-footer .primary-button,
+.expense-drawer .drawer-field-calendar .calendar-footer .secondary-button{
+    min-height:38px;
+    padding:0 14px;
+    border-radius:11px;
+    font-size:13px;
+}
+
+/* -----------------------------------------------------
+   Selected list row
+   Indicator is flush with the left edge of the list panel.
+----------------------------------------------------- */
+.expense-row.is-drawer-active{
+    position:relative;
+    margin-left:-26px;
+    width:calc(100% + 26px);
+    padding-left:26px;
+    background:linear-gradient(90deg,rgba(255,232,96,.16) 0%,rgba(255,232,96,.07) 42%,rgba(255,255,255,0) 82%);
+}
+.expense-row.is-drawer-active::before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:3px;
+    border-radius:0 3px 3px 0;
+    background:var(--accent);
+}
+
+/* -----------------------------------------------------
+   Success toast
+----------------------------------------------------- */
+.expense-drawer-toast{
+    position:fixed;
+    top:80px;
+    right:20px;
+    z-index:110;
+    min-width:230px;
+    max-width:min(360px,calc(100vw - 32px));
+    padding:12px 15px;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    border:1px solid #E5D875;
+    border-radius:14px;
+    background:#FFF9D8;
+    color:#4A431E;
+    box-shadow:0 13px 34px rgba(26,26,26,.10);
+    font-size:13px;
+    font-weight:750;
+    animation:drawerToastIn .22s ease both;
+}
+.expense-drawer-toast::before{content:"";width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:var(--accent)}
+.expense-drawer-toast.is-hiding{animation:drawerToastOut .2s ease both}
+@keyframes drawerToastIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes drawerToastOut{to{opacity:0;transform:translateY(-6px)}}
+
+/* Unsaved-change modal must sit above the drawer. */
+.app-modal{z-index:90}
+
+/* -----------------------------------------------------
+   Desktop: keep the transaction list visible.
+----------------------------------------------------- */
+@media (max-width:640px){
+    .main-content{padding-top:20px}
+    .hero-refresh{padding:16px 0 22px}
+    .hero-refresh h1{font-size:34px}
+    .expense-drawer{width:100%}
+    .expense-drawer-head{padding:20px 20px 17px}
+    .expense-drawer-body{padding:20px 20px 28px}
+    .expense-drawer .form-actions{margin-left:-20px;margin-right:-20px;margin-bottom:-28px;padding-left:20px;padding-right:20px}
+    .expense-drawer-backdrop{background:rgba(26,26,26,.18)}
+    .expense-drawer-toast{top:72px;right:14px;left:14px;max-width:none}
+}
+
+
+/* =====================================================
+   Drawer form polish v3
+   - 날짜: 선택 후 한국식 표기 + 진한 색
+   - 카테고리: 선택 색상 dot 표시
+   - 내용 input: 브라우저 autofill/focus의 파란 배경 제거
+   - 금액: number spinner 화살표 제거
+===================================================== */
+
+/* 날짜 */
+.expense-drawer #formDateText {
+    color: var(--text) !important;
+    font-weight: 400;
+}
+
+.expense-drawer #formDateText.is-placeholder {
+    color: #8B8B8B !important;
+    font-weight: 400;
+}
+
+/* 날짜를 클릭하면 바로 확정되므로 별도 '확인' 버튼은 숨깁니다. */
+.expense-drawer #formCalendarClose {
+    display: none !important;
+}
+
+.expense-drawer .drawer-field-calendar .calendar-footer {
+    justify-content: flex-end;
+}
+
+/* 카테고리 선택 dot */
+.expense-drawer .category-input-wrap {
+    position: relative;
+}
+
+.expense-drawer .drawer-category-selected-dot {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+
+    width: 8px;
+    height: 8px;
+
+    transform: translateY(-50%);
+
+    border-radius: 50%;
+
+    z-index: 2;
+    pointer-events: none;
+}
+
+.expense-drawer .category-input-wrap.has-selected-category .category-search-input {
+    /* dot 오른쪽에서 약 11px 간격 */
+    padding-left: 37px;
+}
+
+/* Drawer 입력 필드는 항상 흰색 기반으로 유지 */
+.expense-drawer .form-control,
+.expense-drawer .form-date-trigger,
+.expense-drawer .category-search-input {
+    background: #FFFFFF !important;
+}
+
+/*
+Chrome / Edge autofill이 내용 input을 파랗거나 색 있는 배경으로
+덮어쓰는 현상을 Drawer 안에서만 제거합니다.
+*/
+.expense-drawer input:-webkit-autofill,
+.expense-drawer input:-webkit-autofill:hover,
+.expense-drawer input:-webkit-autofill:focus,
+.expense-drawer input:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--text) !important;
+    -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+    box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+    caret-color: var(--text);
+    transition: background-color 9999s ease-out 0s;
+}
+
+/* focus도 배경색은 그대로, 테두리만 강조 */
+.expense-drawer .form-control:focus,
+.expense-drawer .form-date-trigger:focus,
+.expense-drawer .category-search-input:focus {
+    background: #FFFFFF !important;
+}
+
+/* 금액 input의 의미 없는 위/아래 spinner 제거 */
+.expense-drawer input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.expense-drawer input[type="number"]::-webkit-inner-spin-button,
+.expense-drawer input[type="number"]::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+
+/* =====================================================
+   Calendar UX polish v8
+===================================================== */
+
+/* 메인 기간 선택 달력의 Drawer 스타일 X 버튼 */
+#calendarPopover .calendar-card.has-calendar-dialog-close {
+    position: relative;
+}
+
+#calendarPopover
+.calendar-card.has-calendar-dialog-close
+.calendar-head {
+    padding-right: 48px;
+}
+
+.calendar-dialog-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+
+    width: 42px;
+    height: 42px;
+
+    display: inline-grid;
+    place-items: center;
+
+    border: 1px solid var(--line);
+    border-radius: 50%;
+
+    background: #FFFFFF;
+    color: #666666;
+
+    font-size: 24px;
+    font-weight: 300;
+    line-height: 1;
+
+    z-index: 3;
+}
+
+.calendar-dialog-close:hover {
+    background: var(--surface-soft);
+    color: var(--ink);
+}
+
+
+/* Drawer: 2026년 9월 title 자체가 빠른 연/월 선택 버튼 */
+.expense-drawer
+.drawer-calendar-title-button {
+    padding: 6px 10px;
+
+    border-radius: 9px;
+
+    cursor: pointer;
+
+    transition:
+        background .15s ease,
+        color .15s ease;
+}
+
+.expense-drawer
+.drawer-calendar-title-button:hover,
+.expense-drawer
+.drawer-calendar-title-button:focus-visible {
+    background: var(--surface-soft);
+    outline: none;
+}
+
+
+/* 연도 / 월 빠른 이동 panel */
+.expense-drawer .calendar-card {
+    position: relative;
+}
+
+.expense-drawer .drawer-calendar-jump {
+    position: absolute;
+    inset: 0;
+
+    padding: 14px;
+
+    border-radius: 17px;
+
+    background: #FFFFFF;
+
+    z-index: 7;
+}
+
+.expense-drawer
+.drawer-calendar-jump[hidden] {
+    display: none !important;
+}
+
+.drawer-calendar-jump-head {
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 12px;
+}
+
+.drawer-calendar-jump-nav {
+    width: 36px;
+    height: 36px;
+
+    border: 1px solid #E1E1E1;
+    border-radius: 11px;
+
+    background: #FFFFFF;
+    color: var(--ink);
+
+    font-size: 20px;
+}
+
+.drawer-calendar-jump-year {
+    min-height: 36px;
+
+    border: 0;
+    border-radius: 10px;
+
+    background: transparent;
+    color: var(--ink);
+
+    font-weight: 800;
+}
+
+.drawer-calendar-jump-year:hover {
+    background: var(--surface-soft);
+}
+
+.drawer-calendar-jump-range {
+    text-align: center;
+    color: var(--ink);
+
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.drawer-calendar-month-grid,
+.drawer-calendar-year-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+}
+
+.drawer-calendar-month,
+.drawer-calendar-year {
+    min-height: 45px;
+
+    border: 1px solid transparent;
+    border-radius: 11px;
+
+    background: #F8F8F8;
+    color: #555555;
+
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.drawer-calendar-month:hover,
+.drawer-calendar-year:hover {
+    border-color: #D7D7D7;
+    background: #FFFFFF;
+    color: var(--ink);
+}
+
+.drawer-calendar-month.is-current,
+.drawer-calendar-year.is-current {
+    border-color: #E8CE3E;
+    background: #FFF8CC;
+    color: var(--ink);
+}
+
+
+
+/*
+=========================================================
+SSEUM Chart Polish
+---------------------------------------------------------
+1) 소량의 일별 데이터에서 불필요한 가로 스크롤 제거
+2) 실제로 데이터가 많을 때만 JS가 스크롤 모드 활성화
+3) adaptive / comparison 추이 차트에 동일 적용
+=========================================================
+*/
+
+/* 기존 style.css의 고정 520px 강제값을 해제합니다. */
+.adaptive-trend[data-granularity="day"] .adaptive-trend-bars,
+.comparison-trend[data-granularity="day"] .comparison-trend-bars {
+    min-width: 100%;
+}
+
+/* 소량 데이터는 카드 안에서 완전히 맞춰 보여줍니다. */
+.adaptive-trend:not(.is-trend-scrollable),
+.comparison-trend:not(.is-trend-scrollable) {
+    overflow-x: hidden;
+}
+
+/* 실제 데이터가 많은 경우에만 스크롤을 허용합니다. */
+.adaptive-trend.is-trend-scrollable,
+.comparison-trend.is-trend-scrollable {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #B6B6B6 transparent;
+}
+
+/* WebKit scrollbar는 너무 두껍지 않게 정리 */
+.adaptive-trend.is-trend-scrollable::-webkit-scrollbar,
+.comparison-trend.is-trend-scrollable::-webkit-scrollbar {
+    height: 6px;
+}
+
+.adaptive-trend.is-trend-scrollable::-webkit-scrollbar-track,
+.comparison-trend.is-trend-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.adaptive-trend.is-trend-scrollable::-webkit-scrollbar-thumb,
+.comparison-trend.is-trend-scrollable::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #B6B6B6;
+}
+
+/*
+두세 개 데이터일 때 막대가 한쪽에 몰리지 않도록
+각 항목이 남은 영역을 균등하게 사용합니다.
+*/
+.adaptive-trend:not(.is-trend-scrollable) .adaptive-trend-item,
+.comparison-trend:not(.is-trend-scrollable) .comparison-trend-group {
+    flex: 1 1 0;
+}
+
+/* 도넛 애니메이션 중 회색 잔여 영역이 너무 진하지 않게 */
+.donut-chart,
+.description-donut {
+    background-color: #F1F1F1;
+}
+
+
+/* conic-gradient 경계 anti-aliasing 안정화 */
+.donut-chart,
+.description-donut {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: background;
+}
+
+/* === SSEUM personal ledger: shared tokens and responsive layout === */
+:root{--accent:#FFEB60;--accent-hover:#F3DB43;--muted:#70716B;--surface-soft:#F7F8F5;--line:#E4E6DF;--radius-md:22px}
+body{font-feature-settings:"tnum";word-break:keep-all;overflow-wrap:anywhere}
+.page-shell{width:min(1180px,calc(100% - 64px))}
+.main-content{padding-top:36px;padding-bottom:44px}
+.header-inner{min-height:78px;gap:32px}
+.brand-logo{height:30px}
+.header-nav{display:flex;gap:32px;align-self:stretch;align-items:center;margin-right:auto;margin-left:42px;font-size:14px;font-weight:700;color:#74766D}
+.header-nav a{height:100%;display:flex;align-items:center;border-bottom:3px solid transparent;padding-top:3px}
+.header-nav a[aria-current]{color:var(--ink);border-color:var(--ink)}
+.header-add-button{min-height:42px;border-radius:12px}
+.home-intro{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:28px}
+.home-eyebrow{font-size:10px;letter-spacing:.16em;font-weight:800;color:#72756C;margin-bottom:12px}
+.home-intro h1{font-size:clamp(26px,3.1vw,38px);font-weight:800;letter-spacing:-.055em;line-height:1.25;margin:0 0 10px}
+.home-subtitle{font-size:14px;line-height:1.6;color:var(--muted);margin:0}
+.home-date{font-size:13px;font-weight:700;white-space:nowrap;color:#62665C}
+.home-date span{font-weight:500;margin-left:7px;color:var(--muted)}
+.home-overview{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;margin-bottom:44px}
+.month-spend{background:var(--accent);border-radius:24px;padding:30px 32px;display:flex;flex-direction:column;min-width:0;position:relative;overflow:hidden}
+.spend-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.month-label{font-size:15px;font-weight:700;letter-spacing:-.02em}
+.live-dot{font-size:11px;color:#605A25;display:flex;align-items:center;gap:6px}
+.live-dot:before{content:"";width:5px;height:5px;border-radius:50%;background:#524E23}
+.month-number{font-size:clamp(36px,4.6vw,58px);line-height:1.15;font-weight:850;letter-spacing:-.045em;margin:26px 0 12px;font-variant-numeric:tabular-nums}
+.month-number>span{font-size:23px;font-weight:600;margin-left:8px}
+.month-comparison{font-size:12px;line-height:1.7;color:#69602B;margin-bottom:26px}
+.month-comparison strong{font-weight:700;color:#514A23}
+.spend-bottom{border-top:1px solid rgba(40,35,0,.15);padding-top:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:auto}
+.spend-bottom>div{display:flex;flex-direction:column;gap:7px}
+.spend-bottom>div>span{font-size:11px;color:#665F32}
+.spend-bottom strong{font-size:17px;font-weight:800}
+.ink-button{display:inline-flex;gap:20px;align-items:center;justify-content:center;padding:14px 19px;border-radius:12px;background:#22251F;color:white;font-size:13px;font-weight:700;min-height:46px}
+.ink-button:hover{background:#3A3E32}
+.budget-card{background:white;border:1px solid var(--line);border-radius:24px;padding:28px;display:flex;flex-direction:column;min-width:0}
+.budget-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:23px}
+.budget-heading h2{font-size:15px;line-height:1.4;letter-spacing:-.03em}
+.text-link{font-size:12px;font-weight:600;color:#777B70;text-decoration:underline;text-underline-offset:4px}
+.budget-caption{font-size:12px;color:var(--muted)}
+.budget-number{font-size:34px;font-weight:800;margin:9px 0 22px;line-height:1.2;letter-spacing:-.04em}
+.budget-number>span{font-size:18px;font-weight:600;margin-left:6px}
+.budget-progress{height:9px;background:#F0F1EB;border-radius:10px;overflow:hidden}
+.budget-progress>span{display:block;height:100%;border-radius:10px;background:#616F4E}
+.budget-meter-label{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:11px;color:#777B70;margin-top:10px}
+.budget-tip{margin:18px 0 0;font-size:11px;line-height:1.6;color:#777B70}
+.is-over{color:#B14C3D}.budget-progress>span.is-over{background:#C86D59}
+.budget-empty-icon{background:#F1F3EB;color:#576445;border-radius:12px;width:36px;height:36px;display:grid;place-items:center;font-size:21px;font-weight:700;margin-bottom:14px}
+.budget-empty-title{font-size:16px;margin:0 0 9px;font-weight:800}
+.budget-empty-copy{font-size:12px;line-height:1.7;color:var(--muted);margin:0 0 19px}
+.budget-start{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;font-weight:700;margin-top:auto;color:#454C3C}
+.ledger-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px;scroll-margin-top:100px}
+.ledger-heading .eyebrow{font-size:9px;letter-spacing:.12em;margin-bottom:5px}
+.ledger-heading h2{font-size:21px;letter-spacing:-.04em}
+.ledger-heading>p{font-size:12px;color:var(--muted);margin:0 0 4px}
+.filter-dock{background:white;border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:20px}
+.ledger-search{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.search-field{display:flex;align-items:center;gap:10px;max-width:450px;flex:1;padding:0 13px;border:1px solid #E8EAE4;border-radius:10px;background:#F7F8F5;min-width:0}
+.search-field svg{flex-shrink:0;width:17px;color:#8B9083}
+.search-field input{background:transparent;border:0;outline:0;min-width:0;width:100%;height:40px;font-size:12px;color:var(--ink)}
+.search-field:focus-within{outline:none;border-color:#BDB597;box-shadow:0 0 0 3px rgba(207,196,142,.13)}
+.ledger-search .secondary-button{min-height:40px;padding:0 15px;font-size:12px;border-radius:10px}
+.export-button{margin-left:auto;font-size:12px;color:#666D5D;display:flex;align-items:center;gap:12px;padding:10px 0;white-space:nowrap}
+.filter-topline{gap:12px;flex-wrap:wrap}
+.filter-button,.date-button{min-height:38px;font-size:12px;border-radius:10px}
+.quick-periods{gap:4px}.quick-period{font-size:11px;min-height:34px;padding:0 12px;border-radius:8px}
+.summary-grid{gap:16px;margin-bottom:20px}
+.summary-card{min-height:117px;padding:20px 23px;border-radius:18px}
+.summary-label{font-size:12px}.summary-value{font-size:26px;line-height:1.35;letter-spacing:-.035em}
+.summary-card-largest .largest-badges{margin-top:8px;margin-bottom:6px}
+.mini-badge{font-size:10px}.summary-card-largest .summary-value{font-size:24px}
+.content-grid{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start}
+.panel{border-radius:20px;padding:24px;min-width:0}
+.section-heading{margin-bottom:24px}.section-heading h2{font-size:17px;line-height:1.4}
+.section-heading .eyebrow{font-size:9px;letter-spacing:.12em}
+.expense-row{gap:12px;padding:16px 0;min-width:0}
+.expense-main,.expense-description{min-width:0}.expense-description{font-size:13px;overflow-wrap:anywhere}
+.expense-title-line{flex-wrap:wrap;gap:7px}.expense-amount{font-size:15px;white-space:nowrap}
+.expense-side{gap:12px}.category-chip{font-size:10px;padding:5px 8px;max-width:100%;overflow-wrap:anywhere}
+.row-actions{opacity:1;gap:4px}.ghost-button,.danger-button{min-height:32px;min-width:36px;font-size:11px;padding:6px}
+.expense-date-heading{font-size:11px}.expense-date-weekday{color:#81877A}
+.side-stack{gap:20px;min-width:0}.dashboard-card{min-width:0}
+.pagination{display:flex;align-items:center;justify-content:center;gap:16px;font-size:12px;padding-top:20px;border-top:1px solid var(--line);margin-top:12px;color:#606855}
+.pagination a{border:1px solid var(--line);padding:10px;border-radius:9px;min-height:40px}
+.app-footer{border-top:1px solid var(--line);padding:23px 0 32px;display:flex;align-items:center;justify-content:space-between;color:#8A8F80;font-size:11px}
+.app-footer>span:first-child{font-weight:800;color:#545D46}
+.mobile-nav{display:none}.budget-page{max-width:620px;margin:auto}
+.budget-page>.text-link{display:inline-block;margin-bottom:30px}.budget-page .form-heading h1{font-size:29px}
+.budget-form .field-group{margin-bottom:22px}.budget-help{font-size:12px;color:var(--muted);line-height:1.6}
+.budget-form input{width:100%}
+.skip-link{position:fixed;top:-100px;left:20px;padding:12px;background:#222;color:#fff;z-index:100}
+.skip-link:focus{top:12px}
+a:focus-visible,button:focus-visible{outline:2px solid #B6AC78;outline-offset:3px}
+@media(max-width:1024px){
+    .page-shell{width:calc(100% - 40px)}.home-overview,.content-grid{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+    .month-spend{padding:26px}.budget-card{padding:24px}.panel{padding:20px}.expense-side{flex-direction:column;align-items:flex-end;gap:6px}
+    .header-nav{margin-left:16px}.spend-bottom{gap:12px}.ink-button{gap:12px;padding:13px}.month-number{font-size:44px}
+}
+@media(max-width:760px){
+    .page-shell{width:calc(100% - 32px)}.main-content{padding-top:26px;padding-bottom:30px}
+    .header-inner{min-height:64px;gap:16px}.brand-logo{height:27px}.header-nav{margin-left:auto;margin-right:0;gap:20px;font-size:12px}
+    .header-add-button{display:none}.home-intro{margin-bottom:22px}.home-date{display:none}
+    .home-intro h1{font-size:28px}.home-subtitle{font-size:12px}.home-eyebrow{font-size:9px;margin-bottom:10px}
+    .home-overview{grid-template-columns:1fr;gap:14px;margin-bottom:30px}.month-spend{border-radius:20px;padding:24px}
+    .month-number{font-size:46px;margin-top:22px}.month-number>span{font-size:21px}.month-comparison{margin-bottom:22px}
+    .budget-card{border-radius:20px;padding:22px}.budget-heading{margin-bottom:18px}.budget-number{font-size:30px}
+    .budget-empty-icon{display:none}.budget-empty-title{font-size:15px}.budget-empty-copy br{display:none}.budget-empty-copy{margin-bottom:14px}
+    .ledger-heading>p{display:none}.ledger-heading h2{font-size:20px}.filter-dock{padding:14px;border-radius:16px}
+    .ledger-search{flex-wrap:wrap;gap:8px}.search-field{max-width:none;flex-basis:70%}.search-field input{font-size:12px}
+    .export-button{font-size:11px;padding:4px 0}.filter-topline{flex-direction:column;align-items:stretch;gap:12px}.filter-actions{flex-wrap:wrap;gap:8px}
+    .quick-periods{display:flex;width:100%}.quick-period{flex:1;min-height:38px;padding:0 8px}
+    .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.summary-card{padding:16px;min-height:100px;border-radius:16px}
+    .summary-grid>.summary-card:last-child{grid-column:1/-1;min-height:90px}.summary-value{font-size:23px}
+    .summary-card-largest .largest-badges{margin:4px 0}.summary-card-largest{display:grid;grid-template-columns:1fr auto;gap:6px}
+    .summary-card-largest .summary-label{grid-column:1/-1}.summary-card-largest .summary-value{font-size:23px;align-self:end}
+    .content-grid{grid-template-columns:1fr;gap:18px}.panel{padding:20px;border-radius:18px}
+    .expense-side{flex-direction:column;align-items:flex-end;gap:7px}.expense-title-line{flex-direction:column;align-items:flex-start;gap:8px}
+    .expense-description{font-size:13px;line-height:1.5}.expense-row{align-items:center}.expense-amount{font-size:15px}
+    .ghost-button,.danger-button{min-height:40px;min-width:42px;font-size:11px}.row-actions{gap:2px}
+    .mobile-nav{position:fixed;bottom:0;left:0;right:0;z-index:45;display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:8px;background:rgba(255,255,255,.97);border-top:1px solid var(--line);padding:9px 16px calc(9px + env(safe-area-inset-bottom));backdrop-filter:blur(12px)}
+    .mobile-nav>a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;color:#737B68;min-height:47px}
+    .mobile-nav>a>span{font-size:18px;line-height:1.1}.mobile-nav>.mobile-create{background:var(--accent);color:#343B29;border-radius:12px;font-weight:800}
+    .app-footer{padding-bottom:110px;font-size:10px}.expense-drawer{width:100%;height:100dvh}.expense-drawer-body{padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+    .expense-drawer .form-actions{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+    .calendar-card{max-width:calc(100vw - 32px)}.form-control{font-size:16px}.form-page{width:100%}.form-grid{grid-template-columns:1fr}.field-group.full{grid-column:auto}
+    .budget-page .form-heading h1{font-size:25px}.budget-help{font-size:11px}
+}
+@media(max-width:360px){.month-number{font-size:39px}.month-spend{padding:20px}.ink-button{font-size:12px;padding:12px;gap:7px}.header-nav{gap:14px}.summary-card{padding:13px}.summary-value{font-size:21px}.panel{padding:16px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Reading scale and consistent, quiet input states */
+.form-control:focus,.form-control:focus-visible,.form-date-trigger:focus-visible{outline:none;border-color:#BDB597;box-shadow:0 0 0 3px rgba(207,196,142,.13)}
+input[type=number]{appearance:textfield;-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.search-field input:focus,.search-field input:focus-visible{outline:none!important;box-shadow:none!important;border:0!important}
+input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none}
+.search-field input{font-size:15px;height:46px}
+.search-clear{width:30px;height:30px;flex:0 0 30px;border:0;border-radius:50%;background:#ECEDE7;color:#707268;display:grid;place-items:center;padding:6px}
+.search-clear svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5}
+.search-result-status{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 18px;font-size:15px;line-height:1.6}
+.search-result-status button{border:0;border-radius:20px;background:#ECEDE7;color:#585B52;padding:9px 14px;white-space:nowrap;font:inherit}
+.filter-button,.date-button,.quick-period,.category-choice,.filter-chip,.ledger-search .secondary-button,.export-button{font-size:14px}
+.quick-period{min-height:40px}.summary-label,.result-count{font-size:14px}.expense-description,.expense-amount{font-size:16px;line-height:1.6}
+.category-chip,.mini-badge,.ghost-button,.danger-button,.expense-date-heading,.expense-date-main,.expense-date-weekday{font-size:13px}
+.section-heading h2{font-size:20px}.section-heading .eyebrow,.ledger-heading .eyebrow{font-size:11px}
+.donut-legend,.description-donut-name,.description-donut-value,.comparison-metric-row,.comparison-trend-legend,.adaptive-trend-label,.adaptive-trend-value{font-size:14px}
+.content-grid > .panel,.content-grid > .side-stack{grid-column:auto;min-width:0}
+@media(min-width:761px){.content-grid{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}.content-grid>.panel{grid-column:1;grid-row:1}.content-grid>.side-stack{grid-column:2;grid-row:1}}
+/* Keep a centered, bounded working area beside the drawer. */
+@media(min-width:1200px){
+ body.expense-drawer-open .header-inner,body.expense-drawer-open .main-content{width:min(1180px,calc(100% - 518px));max-width:1180px;margin-left:max(44px,calc((100vw - 430px - 1180px)/2));margin-right:474px}
+ body.expense-drawer-open .content-grid{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+ body.expense-drawer-open .content-grid>.side-stack{display:grid}
+ .expense-drawer-layer{pointer-events:none}.expense-drawer{pointer-events:auto}.expense-drawer-backdrop{pointer-events:none;background:transparent}
+}
+.budget-dialog{width:min(480px,calc(100vw - 32px));max-height:calc(100dvh - 48px);border:1px solid #E4E6DF;border-radius:24px;padding:28px;color:var(--ink);background:#fff;box-shadow:0 24px 80px #1A1A1A20;overflow:auto}
+.budget-dialog::backdrop{background:rgba(26,26,26,.22)}
+.budget-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px}
+.budget-dialog-head h2{font-size:22px}.budget-dialog-head p{margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.6}
+.budget-close{border:1px solid var(--line);background:white;border-radius:50%;width:36px;height:36px;font-size:23px;color:#686B61;flex-shrink:0}
+.budget-month-field{position:relative}.budget-month-field .form-date-trigger{width:100%;display:flex;justify-content:space-between;align-items:center;font-size:16px}
+.budget-month-picker{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:5;background:white;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 32px #1A1A1A14}
+.month-picker-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.month-picker-head button{width:36px;height:36px;border:0;background:#F6F6F2;border-radius:9px;font-size:22px;color:#686B61}
+.month-picker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.month-picker-grid button{min-height:42px;border:1px solid transparent;background:#F7F8F5;border-radius:10px;font:inherit;color:var(--ink)}
+.month-picker-grid button[aria-pressed=true]{background:#FFF7CC;border-color:#E0D394}.month-picker-grid button:hover{border-color:#CAC7B7}
+.budget-form .field-label{font-size:15px}.budget-form .form-control{font-size:16px}.budget-help{font-size:13px;line-height:1.7}.budget-dialog .form-actions{margin-bottom:0}
+@media(max-width:760px){.search-field input{font-size:16px}.filter-button,.date-button,.quick-period,.category-choice{font-size:14px}.expense-description,.expense-amount{font-size:15px}.search-result-status{font-size:14px;flex-wrap:wrap}.budget-dialog{padding:22px}.content-grid>.panel,.content-grid>.side-stack{grid-column:auto;grid-row:auto}}

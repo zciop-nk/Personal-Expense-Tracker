@@ -89,6 +89,8 @@ function initExpenseDrawer() {
         if (closeTimer) window.clearTimeout(closeTimer);
 
         layer.hidden = false;
+        document.querySelectorAll(".site-header, main, .app-footer, .mobile-nav").forEach(el => { el.inert = true; });
+        drawer.querySelector("[data-drawer-close]")?.focus();
         document.body.classList.add("expense-drawer-open");
 
         requestAnimationFrame(() => {
@@ -106,6 +108,7 @@ function initExpenseDrawer() {
         layer.classList.remove("is-open");
         drawer.setAttribute("aria-hidden", "true");
         document.body.classList.remove("expense-drawer-open");
+        document.querySelectorAll(".site-header, main, .app-footer, .mobile-nav").forEach(el => { el.inert = false; });
         setActiveRow(null);
         isDirty = false;
 
@@ -1014,7 +1017,10 @@ function initExpenseDrawer() {
             const data = await response.json();
             if (!data.results_html) throw new Error("missing results_html");
 
+            const knownCategories = [...document.querySelectorAll('#filterForm input[name="category"]')].map(input => input.value);
+            if (data.category_names && JSON.stringify(knownCategories) !== JSON.stringify(data.category_names)) { window.location.reload(); return; }
             resultsArea.innerHTML = data.results_html;
+            if (data.home_html) document.querySelector("#homeArea").innerHTML = data.home_html;
 
             if (typeof decorateResults === "function") {
                 decorateResults();

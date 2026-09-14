@@ -1,8 +1,18 @@
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, char => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[char]));
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     initListPage();
     initFormCalendar();
     initCategoryCombobox();
     initFlashMessages();
+    const display = document.querySelector("#descriptionDisplay");
+    const hidden = document.querySelector("#id_description");
+    if (display && hidden) {
+        display.addEventListener("input", () => { hidden.value = display.value; });
+        display.form.addEventListener("submit", () => { hidden.value = display.value; });
+    }
 });
 
 function openConfirmModal({
@@ -460,7 +470,7 @@ function renderDescriptionDonut() {
                 ></span>
 
                 <span class="description-donut-name">
-                    ${item.name}
+                    ${escapeHtml(item.name)}
                 </span>
             </div>
 
@@ -678,7 +688,7 @@ function renderComparisonDashboard() {
         if (legend) {
             legend.innerHTML = categories.map((category) => {
                 const [, , solid] = getCategoryPalette(category.colorKey);
-                return `<span><i style="background:${solid}"></i>${category.name}</span>`;
+                return `<span><i style="background:${solid}"></i>${escapeHtml(category.name)}</span>`;
             }).join("");
         }
 
@@ -733,8 +743,15 @@ function initListPage() {
     const dateRangeLabel = document.querySelector("#dateRangeLabel");
     const quickButtons = [...document.querySelectorAll("[data-period]")];
     const categoryInputs = [...document.querySelectorAll('input[name="category"]')];
+    const searchInput = document.querySelector("#expenseSearch");
+    form.addEventListener("submit", event => { event.preventDefault(); applyFilters(); });
     const dateButton = document.querySelector("#openCalendar");
 
+    const clearSearch = document.querySelector("#clearSearch");
+    searchInput.addEventListener("input", () => { clearSearch.hidden = !searchInput.value; });
+    function resetSearch() { searchInput.value = ""; clearSearch.hidden = true; applyFilters(); searchInput.focus(); }
+    clearSearch.addEventListener("click", resetSearch);
+    resultsArea.addEventListener("click", event => { if (event.target.closest("[data-search-reset]")) resetSearch(); });
     let activeRequest = null;
 
     function getParams() {
@@ -748,6 +765,7 @@ function initListPage() {
         if (dateFrom.value) params.set("date_from", dateFrom.value);
         if (dateTo.value) params.set("date_to", dateTo.value);
         if (periodValue.value) params.set("period", periodValue.value);
+        if (searchInput.value.trim()) params.set("q", searchInput.value.trim());
 
         return params;
     }
@@ -771,7 +789,7 @@ function initListPage() {
     function updateResetVisibility() {
         const hasCategory = categoryInputs.some((input) => input.checked);
         const hasDate = Boolean(dateFrom.value || dateTo.value);
-        resetFilters.hidden = !(hasCategory || hasDate);
+        resetFilters.hidden = !(hasCategory || hasDate || searchInput.value.trim());
     }
 
     function renderActiveChips() {
@@ -790,7 +808,7 @@ function initListPage() {
             chip.style.backgroundColor = bg;
             chip.style.color = text;
             chip.style.borderColor = bg;
-            chip.innerHTML = `<span>${input.value}</span><button type="button" aria-label="${input.value} 필터 제거">×</button>`;
+            chip.innerHTML = `<span>${escapeHtml(input.value)}</span><button type="button" aria-label="${escapeHtml(input.value)} 필터 제거">×</button>`;
             chip.querySelector("button").addEventListener("click", () => {
                 input.checked = false;
                 applyFilters();
@@ -823,6 +841,7 @@ function initListPage() {
             activeChips.appendChild(chip);
         }
 
+        if (searchInput.value.trim()) count += 1;
         activeFilterCount.textContent = String(count);
         activeFilterCount.hidden = count === 0;
         updateResetVisibility();
@@ -839,6 +858,11 @@ function initListPage() {
         renderActiveChips();
 
         resultsArea.classList.add("results-loading");
+        const requestToken = activeRequest;
+        resultsArea.setAttribute("aria-busy", "true");
+        const filterStatus = document.querySelector("#filterStatus");
+        filterStatus.textContent = "검색 중이에요…"; filterStatus.hidden = false;
+        clearSearch.hidden = !searchInput.value;
 
         try {
             const response = await fetch(url, {
@@ -851,14 +875,23 @@ function initListPage() {
             const data = await response.json();
             resultsArea.innerHTML = data.results_html;
 
+            document.querySelector("#exportLink").href = `/expenses/export/?${params.toString()}`;
+            document.querySelector("#filterStatus").hidden = true;
+            document.querySelector("#resultsArea").setAttribute("aria-busy", "false");
             history.replaceState(null, "", url);
             decorateResults();
         } catch (error) {
             if (error.name !== "AbortError") {
                 console.error(error);
+                const status = document.querySelector("#filterStatus");
+                status.textContent = "조회하지 못했어요. 이전 결과를 표시 중입니다. 다시 검색해 주세요.";
+                status.hidden = false;
             }
         } finally {
-            resultsArea.classList.remove("results-loading");
+            if (activeRequest === requestToken) {
+                resultsArea.classList.remove("results-loading");
+                resultsArea.setAttribute("aria-busy", "false");
+            }
         }
     }
 
@@ -900,6 +933,7 @@ function initListPage() {
 
     resetFilters?.addEventListener("click", () => {
         categoryInputs.forEach((input) => { input.checked = false; });
+        searchInput.value = "";
         dateFrom.value = "";
         dateTo.value = "";
         periodValue.value = "";
@@ -1186,6 +1220,8 @@ function initCategoryCombobox() {
 
     if (!combobox || !searchInput || !dropdown || !hiddenInput) return;
 
+    const selectedOption = options.find(option => option.dataset.categoryId === hiddenInput.value);
+    if (selectedOption) searchInput.value = selectedOption.dataset.categoryName;
     function openDropdown() {
         dropdown.hidden = false;
         searchInput.setAttribute("aria-expanded", "true");
@@ -1339,10 +1375,18 @@ saveNewCategory?.addEventListener("click", async () => {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-            console.error(data.message || "카테고리 생성에 실패했습니다.");
+            let errorBox = combobox.querySelector(".category-api-error");
+            if (!errorBox) {
+                errorBox = document.createElement("p");
+                errorBox.className = "field-error category-api-error";
+                errorBox.setAttribute("role", "alert");
+                combobox.appendChild(errorBox);
+            }
+            errorBox.textContent = data.message || "카테고리 생성에 실패했습니다.";
             return;
         }
 
+        combobox.querySelector(".category-api-error")?.remove();
         const category = data.category;
 
         hiddenInput.value = category.id;
@@ -1354,6 +1398,12 @@ saveNewCategory?.addEventListener("click", async () => {
         closeDropdown();
     } catch (error) {
         console.error(error);
+        const errorBox = document.createElement("p");
+        errorBox.className = "field-error category-api-error";
+        errorBox.setAttribute("role", "alert");
+        errorBox.textContent = "연결에 실패했어요. 잠시 후 다시 추가해 주세요.";
+        combobox.querySelector(".category-api-error")?.remove();
+        combobox.appendChild(errorBox);
     } finally {
         saveNewCategory.disabled = false;
     }
@@ -1365,3 +1415,89 @@ saveNewCategory?.addEventListener("click", async () => {
         }
     });
 }
+// Keep keyboard focus in the active dialog, including the mobile drawer.
+document.addEventListener("keydown", event => {
+    if (event.key !== "Tab") return;
+    const modal = document.querySelector("#appModal:not([hidden]) .app-modal-dialog");
+    const drawer = document.querySelector("#expenseDrawerLayer:not([hidden]) #expenseDrawer");
+    const active = modal || drawer;
+    if (!active) return;
+    const controls = [...active.querySelectorAll('button:not([disabled]), a[href], input:not([type="hidden"]):not([disabled]), [tabindex="0"]')].filter(el => !el.closest("[hidden]") && el.getClientRects().length);
+    if (!controls.length) return;
+    const first = controls[0], last = controls[controls.length - 1];
+    if (event.shiftKey && (document.activeElement === first || !active.contains(document.activeElement))) {
+        event.preventDefault(); last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || !active.contains(document.activeElement))) {
+        event.preventDefault(); first.focus();
+    }
+});
+
+// The budget is a short task completed in place; /budget/ remains a direct-link fallback.
+document.addEventListener("DOMContentLoaded", () => {
+    const dialog = document.querySelector("#budgetDialog");
+    const body = document.querySelector("#budgetDialogBody");
+    let trigger = null;
+    let requestNumber = 0;
+    async function loadBudget(month = "", target = body) {
+        const number = ++requestNumber;
+        const response = await fetch(`/budget/${month ? `?month=${encodeURIComponent(month)}` : ""}`, {headers:{"X-Requested-With":"XMLHttpRequest"}});
+        if (!response.ok) throw new Error("예산을 불러오지 못했어요. 다시 시도해 주세요.");
+        const data = await response.json();
+        if (number !== requestNumber) return;
+        target.innerHTML = data.form_html;
+        bindBudget(target.querySelector("[data-budget-form]"));
+    }
+    function closeBudget() { ++requestNumber; dialog.close(); trigger?.focus(); }
+    function bindBudget(form) {
+        if (!form) return;
+        const field = form.querySelector('[name="month"]');
+        const picker = form.querySelector("#budgetMonthPicker");
+        const button = form.querySelector("[data-month-toggle]");
+        const yearText = form.querySelector("[data-picker-year]");
+        let year = Number(field.value.slice(0,4)) || new Date().getFullYear();
+        form.querySelector("[data-month-label]").textContent = `${year}년 ${Number(field.value.slice(5)) || new Date().getMonth()+1}월`;
+        const error = form.querySelector("[data-budget-error]");
+        function renderMonths() {
+            yearText.textContent = `${year}년`;
+            const grid = form.querySelector("[data-month-grid]"); grid.replaceChildren();
+            for (let month=1;month<=12;month++) {
+                const item = document.createElement("button"); item.type="button"; item.textContent=`${month}월`;
+                const value = `${String(year).padStart(4,"0")}-${String(month).padStart(2,"0")}`;
+                item.setAttribute("aria-pressed", String(field.value === value));
+                item.addEventListener("click", async () => {
+                    picker.hidden=true;button.setAttribute("aria-expanded","false");
+                    try { await loadBudget(value, form.parentElement); }
+                    catch(e) { error.textContent=e.message;error.hidden=false; }
+                });
+                grid.appendChild(item);
+            }
+        }
+        button.addEventListener("click",()=>{picker.hidden=!picker.hidden;button.setAttribute("aria-expanded",String(!picker.hidden));renderMonths();});
+        form.querySelectorAll("[data-year-step]").forEach(item=>item.addEventListener("click",()=>{year=Math.min(9999,Math.max(1,year+Number(item.dataset.yearStep)));renderMonths();}));
+        form.addEventListener("keydown",event=>{if(event.key==="Escape"&&!picker.hidden){event.preventDefault();event.stopPropagation();picker.hidden=true;button.setAttribute("aria-expanded","false");button.focus();}});
+        form.addEventListener("submit",async event=>{
+            event.preventDefault();
+            const submit=form.querySelector('[type="submit"]');submit.disabled=true;submit.textContent="저장 중…";error.hidden=true;
+            try {
+                const response=await fetch(form.action,{method:"POST",body:new FormData(form),headers:{"X-Requested-With":"XMLHttpRequest"}});
+                if(!response.ok)throw new Error("저장하지 못했어요. 다시 시도해 주세요.");
+                const data=await response.json();
+                if(!data.success){form.parentElement.innerHTML=data.form_html;bindBudget((dialog.open ? body : document).querySelector('[data-budget-form]'));return;}
+                const home=document.querySelector("#homeArea");
+                if(home){home.innerHTML=data.home_html;closeBudget();const notice=document.createElement("p");notice.className="expense-drawer-toast";notice.role="status";notice.textContent="월 예산을 저장했어요.";document.body.appendChild(notice);setTimeout(()=>notice.remove(),3000);}
+                else window.location.assign("/");
+            }catch(e){error.textContent=e.message;error.hidden=false;}
+            finally{submit.disabled=false;submit.textContent="예산 저장";}
+        });
+    }
+    document.addEventListener("click",async event=>{
+        const link=event.target.closest("[data-budget-open]");
+        if(link){event.preventDefault();trigger=link;body.textContent="예산을 불러오는 중…";dialog.showModal();try{await loadBudget();}catch(e){body.textContent=e.message;}return;}
+        if(event.target.closest("[data-budget-close]")&&dialog.open){event.preventDefault();closeBudget();}
+        const form=document.querySelector('[data-budget-form]');
+        if(form&&!event.target.closest('.budget-month-field')){form.querySelector('#budgetMonthPicker').hidden=true;form.querySelector('[data-month-toggle]').setAttribute('aria-expanded','false');}
+    });
+    dialog.addEventListener("click",event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeBudget();}});
+    dialog.addEventListener("cancel",()=>{++requestNumber;});
+    bindBudget(document.querySelector("[data-budget-form]"));
+});

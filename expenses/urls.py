@@ -3,6 +3,8 @@ from . import views
 
 urlpatterns = [
     path("", views.expense_list, name="expense_list"),
+    path("budget/", views.budget_settings, name="budget_settings"),
+    path("expenses/export/", views.expense_export, name="expense_export"),
 
     path("expenses/new/", views.expense_create, name="expense_create"),
     path("expenses/<int:pk>/edit/", views.expense_update, name="expense_update"),

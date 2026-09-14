@@ -9,16 +9,16 @@
     <link rel="icon" type="image/png" href="{% static 'expenses/images/favicon-sseum.png' %}">
     <link rel="apple-touch-icon" href="{% static 'expenses/images/favicon-sseum.png' %}">
 
-    <link rel="stylesheet" href="{% static 'expenses/css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'expenses/css/ui-refresh.css' %}">
-    <link rel="stylesheet" href="{% static 'expenses/css/chart-polish.css' %}">
+    <link rel="stylesheet" href="{% static 'expenses/css/sseum.9fbbef0cd3be.css' %}">
 
-    <script src="{% static 'expenses/js/main.js' %}" defer></script>
-    <script src="{% static 'expenses/js/chart-polish.js' %}" defer></script>
-    <script src="{% static 'expenses/js/expense-drawer.js' %}" defer></script>
+
+    <script src="{% static 'expenses/js/ledger.56b4577d5c13.js' %}" defer></script>
+    <script src="{% static 'expenses/js/charts.17c471405918.js' %}" defer></script>
+    <script src="{% static 'expenses/js/drawer.4d722f8d7531.js' %}" defer></script>
 </head>
 
 <body>
+    <a href="#mainContent" class="skip-link">본문으로 건너뛰기</a>
     <header class="site-header">
         <div class="page-shell header-inner">
             <a class="brand" href="{% url 'expense_list' %}" aria-label="씀 SSEUM 홈">
@@ -28,6 +28,7 @@
                     alt="씀 SSEUM"
                 >
             </a>
+
 
             <a
                 class="primary-button compact header-add-button"
@@ -58,10 +59,12 @@
         </div>
     {% endif %}
 
-    <main class="page-shell main-content">
+    <main class="page-shell main-content" id="mainContent">
         {% block content %}{% endblock %}
     </main>
 
+    <footer class="page-shell app-footer"><span>씀 · SSEUM</span><span>나를 위한, 나다운 소비 기록.</span></footer>
+    <nav class="mobile-nav" aria-label="모바일 메뉴"><a href="{% url 'expense_list' %}"><span aria-hidden="true">▤</span>내 가계부</a><a class="mobile-create" href="{% url 'expense_create' %}" data-expense-drawer-link><span aria-hidden="true">＋</span>지출 기록</a><a href="{% url 'budget_settings' %}" data-budget-open><span aria-hidden="true">₩</span>예산 관리</a></nav>
     <div class="expense-drawer-layer" id="expenseDrawerLayer" hidden>
         <button
             class="expense-drawer-backdrop"
@@ -73,6 +76,8 @@
         <aside
             class="expense-drawer"
             id="expenseDrawer"
+            role="dialog"
+            aria-modal="true"
             aria-hidden="true"
             aria-labelledby="expenseDrawerTitle"
         >
@@ -107,6 +112,10 @@
         </aside>
     </div>
 
+    <dialog id="budgetDialog" class="budget-dialog" aria-labelledby="budgetTitle">
+        <div class="budget-dialog-head"><div><h2 id="budgetTitle">월 예산 설정</h2><p>나에게 맞는 소비 기준을 정해요.</p></div><button type="button" class="budget-close" aria-label="예산 설정 닫기" data-budget-close>×</button></div>
+        <div id="budgetDialogBody"></div>
+    </dialog>
     <div class="app-modal" id="appModal" hidden aria-hidden="true">
         <div class="app-modal-backdrop" data-modal-close></div>
 

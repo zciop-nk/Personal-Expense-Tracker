@@ -1,0 +1,14 @@
+<form method="post" action="{% url 'budget_settings' %}" class="budget-form" data-budget-form>
+    {% csrf_token %}
+    <div class="field-group budget-month-field">
+        <label class="field-label" for="budgetMonthTrigger">예산 월</label>
+        {{ form.month }}
+        <button type="button" id="budgetMonthTrigger" class="form-date-trigger" data-month-toggle aria-expanded="false" aria-controls="budgetMonthPicker"><span data-month-label>{{ form.month.value }}</span><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3.5V7M16 3.5V7M3.5 9.5h17"/></svg></button>
+        <div class="budget-month-picker" id="budgetMonthPicker" hidden><div class="month-picker-head"><button type="button" data-year-step="-1" aria-label="이전 연도">‹</button><strong data-picker-year></strong><button type="button" data-year-step="1" aria-label="다음 연도">›</button></div><div class="month-picker-grid" data-month-grid></div></div>
+        {% for error in form.month.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+    <div class="field-group"><label class="field-label" for="id_amount">월 예산</label><div class="amount-input-wrap">{{ form.amount }}<span>원</span></div>{% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
+    <p class="budget-help">월을 바꾸면 해당 월에 저장된 예산을 불러와요.<br>홈에는 이번 달 예산이 표시돼요.</p>
+    <p class="field-error" data-budget-error role="alert" hidden></p>
+    <div class="form-actions"><a href="{% url 'expense_list' %}" class="secondary-button" data-budget-close>취소</a><button type="submit" class="primary-button">예산 저장</button></div>
+</form>

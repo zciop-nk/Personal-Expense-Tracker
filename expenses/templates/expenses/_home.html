@@ -1,0 +1,26 @@
+<section class="money-home" aria-labelledby="homeTitle">
+    <div class="home-intro">
+        <div><p class="home-eyebrow">MY MONEY, MY PACE.</p><h1 id="homeTitle">오늘의 씀, 내일의 여유.</h1><p class="home-subtitle">작은 기록으로 만들어가는 나다운 소비 생활</p></div>
+        <span class="home-date">{{ today|date:"Y.m.d" }} <span>{{ today|date:"l" }}</span></span>
+    </div>
+    <div class="home-overview">
+        <article class="month-spend">
+            <div class="spend-top"><span class="month-label">{{ today|date:"n" }}월, 지금까지 쓴 돈</span><span class="live-dot">오늘까지</span></div>
+            <p class="month-number">{{ month_total|floatformat:"0g" }}<span>원</span></p>
+            <p class="month-comparison">{% if previous_total %}지난달 같은 기간보다 <strong>{{ month_difference|floatformat:"0g" }}원 {% if spending_increased %}더{% else %}덜{% endif %} 썼어요</strong>{% else %}오늘의 작은 지출부터 차곡차곡 기록해 보세요.{% endif %}</p>
+            <div class="spend-bottom"><div><span>오늘 쓴 돈</span><strong>{{ today_total|floatformat:"0g" }}원</strong></div><a class="ink-button" href="{% url 'expense_create' %}" data-expense-drawer-link>＋ 지출 기록하기 <span aria-hidden="true">↗</span></a></div>
+        </article>
+        <article class="budget-card">
+            <div class="budget-heading"><h2>이번 달 예산</h2><a href="{% url 'budget_settings' %}" data-budget-open class="text-link">{% if month_budget %}수정{% else %}설정{% endif %} <span aria-hidden="true">↗</span></a></div>
+            {% if month_budget %}
+                <span class="budget-caption">{% if over_budget %}예산보다 더 쓴 금액{% else %}앞으로 쓸 수 있는 돈{% endif %}</span>
+                <p class="budget-number {% if over_budget %}is-over{% endif %}">{% if over_budget %}{{ over_budget|floatformat:"0g" }}{% else %}{{ remaining|floatformat:"0g" }}{% endif %}<span>원</span></p>
+                <div class="budget-progress" role="progressbar" aria-label="월 예산 사용률" aria-valuenow="{{ budget_percent }}" aria-valuemin="0" aria-valuemax="100" aria-valuetext="예산의 {{ budget_used_percent }}% 사용"><span style="width:{{ budget_percent }}%" class="{% if over_budget %}is-over{% endif %}"></span></div>
+                <div class="budget-meter-label"><span>{{ budget_used_percent }}% 사용</span><span>예산 {{ month_budget.amount|floatformat:"0g" }}원</span></div>
+                <p class="budget-tip">{% if over_budget %}예산을 넘겼어요. 남은 달의 소비를 돌아볼까요?{% else %}오늘 포함 {{ days_left }}일 · 하루 <strong>{{ daily_available|floatformat:"0g" }}원</strong>씩 쓸 수 있어요.{% endif %}</p>
+            {% else %}
+                <div class="budget-empty-icon" aria-hidden="true">₩</div><h3 class="budget-empty-title">나만의 소비 기준을 정해볼까요?</h3><p class="budget-empty-copy">한 달 예산을 정하면 남은 금액과<br>하루에 쓸 수 있는 돈을 알려드려요.</p><a href="{% url 'budget_settings' %}" data-budget-open class="budget-start">월 예산 설정하기 <span aria-hidden="true">→</span></a>
+            {% endif %}
+        </article>
+    </div>
+</section>

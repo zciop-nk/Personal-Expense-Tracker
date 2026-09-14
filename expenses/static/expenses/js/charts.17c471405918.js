@@ -481,7 +481,7 @@ main.js를 직접 덮어쓰지 않고,
                         ></span>
 
                         <span class="description-donut-name">
-                            ${item.name}
+                            ${escapeHtml(item.name)}
                         </span>
                     </div>
 

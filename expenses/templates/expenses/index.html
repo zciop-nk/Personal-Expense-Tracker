@@ -5,45 +5,20 @@
 
 {% block content %}
 
-<!-- =====================================================
-     FINAL HERO · EDITORIAL
-     박스 없이 타이포 + 로고 + yellow accent만 사용합니다.
-====================================================== -->
-<section class="hero-editorial-final" aria-label="씀 소개">
-    <div class="hero-editorial-copy">
-        <p class="hero-editorial-eyebrow">
-            SSEUM · PERSONAL EXPENSE TRACKER
-        </p>
-
-        <h1 class="hero-editorial-title">
-            <span class="hero-line hero-line-small">
-                기록이
-                <span class="hero-highlight-block">습관</span>이 되는,
-            </span>
-
-            <span class="hero-line hero-line-large">
-                나의 지출 관리
-            </span>
-        </h1>
-
-        <span class="hero-bottom-accent" aria-hidden="true"></span>
-    </div>
-
-    <div class="hero-editorial-logo-wrap" aria-hidden="true">
-        <img
-            src="{% static 'expenses/images/logo-sseum-editorial.svg' %}"
-            alt=""
-            class="hero-editorial-logo"
-        >
-    </div>
-</section>
-
+<div id="homeArea">{% include "expenses/_home.html" %}</div>
+<div class="ledger-heading" id="ledger"><div><p class="eyebrow">MY SPENDING</p><h2>나의 지출 살펴보기</h2></div><p>기간과 카테고리로 기록을 돌아보세요.</p></div>
 <section class="filter-dock" aria-label="지출 필터">
     <form id="filterForm" method="get">
         <input type="hidden" name="date_from" id="dateFrom" value="{{ date_from }}">
         <input type="hidden" name="date_to" id="dateTo" value="{{ date_to }}">
         <input type="hidden" name="period" id="periodValue" value="{{ period }}">
 
+        <div class="ledger-search">
+            <div class="search-field"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input type="search" name="q" id="expenseSearch" value="{{ query }}" maxlength="80" placeholder="어디에 썼나요? 내용 또는 카테고리 검색" aria-label="지출 검색"><button type="button" id="clearSearch" class="search-clear" aria-label="검색어 지우기" {% if not query %}hidden{% endif %}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 6 8 8M14 6l-8 8"/></svg></button></div>
+            <button class="secondary-button" type="submit">검색</button>
+            <a class="export-button" id="exportLink" href="{% url 'expense_export' %}?{{ filter_query }}">CSV 내보내기 <span aria-hidden="true">↓</span></a>
+        </div>
+        <p id="filterStatus" role="status" class="field-error" hidden></p>
         <div class="filter-topline">
             <div class="filter-actions">
                 <button class="filter-button" type="button" id="toggleCategoryPanel">

@@ -66,6 +66,20 @@ class Expense(models.Model):
 
     class Meta:
         ordering = ["-date", "-id"]
+        indexes = [models.Index(fields=["date", "id"], name="expense_date_id_idx")]
 
     def __str__(self):
         return f"{self.date} / {self.category} / {self.description}"
+
+
+class MonthlyBudget(models.Model):
+    month = models.DateField("예산 월", unique=True)
+    amount = models.PositiveIntegerField("월 예산", validators=[MinValueValidator(1)])
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-month"]
+        constraints = [models.CheckConstraint(condition=models.Q(amount__gte=1), name="budget_amount_positive")]
+
+    def __str__(self):
+        return f"{self.month:%Y-%m} / {self.amount:,}원"

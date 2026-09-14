@@ -11,6 +11,7 @@ class Command(BaseCommand):
     help = "대시보드 확인용 가상 6개월 지출 데이터를 생성합니다."
 
     def add_arguments(self, parser):
+        parser.add_argument("--replace", action="store_true", help="기존 지출을 삭제하고 예시 데이터로 교체합니다.")
         parser.add_argument(
             "--end-date",
             default=date.today().isoformat(),
@@ -29,6 +30,10 @@ class Command(BaseCommand):
         except ValueError as exc:
             raise CommandError("--end-date는 YYYY-MM-DD 형식이어야 합니다.") from exc
 
+        if options["append"] and options["replace"]:
+            raise CommandError("--append와 --replace는 함께 사용할 수 없습니다.")
+        if Expense.objects.exists() and not options["append"] and not options["replace"]:
+            raise CommandError("기존 지출이 있습니다. 보존하며 추가하려면 --append, 명시적으로 교체하려면 --replace를 사용하세요.")
         categories = {category.name: category for category in Category.objects.all()}
         rows = build_demo_expenses(end_date)
         missing = sorted({row["category"] for row in rows} - set(categories))

@@ -1,4 +1,6 @@
 {% load static %}
+{% if query %}<div class="search-result-status" role="status"><span><strong>“{{ query }}”</strong> 검색 결과 · {{ stats.count }}건</span><button type="button" data-search-reset>검색 해제 ×</button></div>{% endif %}
+{% if filter_errors %}<div class="form-error-box" role="alert">{% for error in filter_errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
 <section class="summary-grid" id="summaryArea">
     {% if dashboard_type == "D" %}
         <article class="summary-card comparison-summary-card">
@@ -39,7 +41,7 @@
             <span class="summary-label">
                 {% if dashboard_type == "B" %}{{ selected_category.name }} 총 지출
                 {% elif dashboard_type == "C" %}기간 총 지출
-                {% else %}전체 지출{% endif %}
+                {% else %}조회된 지출 합계{% endif %}
             </span>
             <strong class="summary-value">{{ stats.total|floatformat:"0g" }}원</strong>
         </article>
@@ -102,7 +104,7 @@
                                 <article class="expense-row">
                                     <div class="expense-main">
                                         <div class="expense-title-line">
-                                            <span class="category-chip" data-category-chip="{{ expense.category.name }}" data-color-key="{{ expense.category.color_key }}">{{ expense.category.name }}</span>
+                                            <span class="category-chip" data-category-chip="{{ expense.category.name }}" data-color-key="{{ expense.category.color_key }}">{{ expense.category.name|default:"미분류" }}</span>
                                             <strong class="expense-description">{{ expense.description }}</strong>
                                         </div>
                                     </div>
@@ -122,11 +124,16 @@
                     </section>
                 {% endfor %}
             </div>
+            {% if page_obj.has_other_pages %}<nav class="pagination" aria-label="지출 목록 페이지">
+                {% if page_obj.has_previous %}<a href="?{{ filter_query }}&page={{ page_obj.previous_page_number }}#ledger">← 이전</a>{% endif %}
+                <span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 페이지</span>
+                {% if page_obj.has_next %}<a href="?{{ filter_query }}&page={{ page_obj.next_page_number }}#ledger">다음 →</a>{% endif %}
+            </nav>{% endif %}
         {% else %}
             <div class="empty-state">
                 <img class="empty-state-logo" src="{% static 'expenses/images/logo-sseum-symbol.png' %}" alt="" aria-hidden="true">
                 <strong>조건에 맞는 지출이 없어요.</strong>
-                <p>필터를 바꾸거나 새로운 지출을 추가해 보세요.</p>
+                <p>필터를 바꾸거나 새로운 지출을 추가해 보세요.</p><a class="primary-button" href="{% url 'expense_create' %}" data-expense-drawer-link>첫 지출 기록하기</a>
             </div>
         {% endif %}
     </article>

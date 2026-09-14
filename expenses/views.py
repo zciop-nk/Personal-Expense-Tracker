@@ -1,13 +1,20 @@
 import random
-from datetime import datetime
+from datetime import datetime, date, timedelta
+import calendar
+import csv
+from django.db.models import Sum, Q
+from django.core.paginator import Paginator
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+from django.http import HttpResponse
 
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 
-from .forms import ExpenseForm
-from .models import Category, CategoryKeyword, Expense
+from .forms import ExpenseForm, BudgetForm
+from .models import Category, CategoryKeyword, Expense, MonthlyBudget
 from .services.statistics import build_statistics
 
 
@@ -30,17 +37,9 @@ def _form_options():
     }
 
 
-def _delete_unused_custom_category(category):
-    if category and not category.is_default and not category.expenses.exists():
-        category.delete()
-
-
-
 def _build_list_context(request):
     categories = list(
-        Category.objects.filter(
-            expenses__isnull=False
-        )
+        Category.objects.filter(expenses__isnull=False)
         .distinct()
         .order_by("name")
     )
@@ -59,7 +58,26 @@ def _build_list_context(request):
     if category_names and set(selected_categories) == set(category_names):
         selected_categories = []
 
-    expenses = Expense.objects.all()
+    filter_errors = []
+    for field, value in (("date_from", date_from), ("date_to", date_to)):
+        if value:
+            try:
+                parsed = date.fromisoformat(value)
+                if parsed.isoformat() != value:
+                    raise ValueError
+            except ValueError:
+                filter_errors.append("날짜는 YYYY-MM-DD 형식으로 입력해 주세요.")
+                if field == "date_from": date_from = ""
+                else: date_to = ""
+    if date_from and date_to and date_from > date_to:
+        filter_errors.append("시작일은 종료일보다 늦을 수 없어요.")
+    query = request.GET.get("q", "").strip()[:80]
+    selected_categories = list(dict.fromkeys(selected_categories))
+    expenses = Expense.objects.select_related("category").all()
+    if filter_errors:
+        expenses = expenses.none()
+    if query:
+        expenses = expenses.filter(Q(description__icontains=query) | Q(category__name__icontains=query))
 
     if selected_categories:
         expenses = expenses.filter(category__name__in=selected_categories)
@@ -140,8 +158,16 @@ def _build_list_context(request):
             }
         )
 
+    page = Paginator(expenses, 30).get_page(request.GET.get("page"))
+    params = request.GET.copy()
+    params.pop("page", None)
     return {
-        "expenses": expenses,
+        "expenses": page.object_list,
+        "filtered_expenses": expenses,
+        "page_obj": page,
+        "filter_query": params.urlencode(),
+        "query": query,
+        "filter_errors": filter_errors,
         "categories": categories,
         "selected_categories": selected_categories,
         "date_from": date_from,
@@ -162,6 +188,7 @@ def _build_list_context(request):
 
 def expense_list(request):
     context = _build_list_context(request)
+    context.update(_build_home_context())
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         results_html = render_to_string(
@@ -172,6 +199,8 @@ def expense_list(request):
         return JsonResponse(
             {
                 "results_html": results_html,
+                "category_names": [category.name for category in context["categories"]],
+                "home_html": render_to_string("expenses/_home.html", context, request=request),
                 "selected_categories": context["selected_categories"],
                 "date_from": context["date_from"],
                 "date_to": context["date_to"],
@@ -207,19 +236,10 @@ def expense_update(request, pk):
     expense = get_object_or_404(Expense, pk=pk)
 
     if request.method == "POST":
-        # 수정하기 전 기존 카테고리를 기억합니다.
-        old_category = expense.category
-
         form = ExpenseForm(request.POST, instance=expense)
 
         if form.is_valid():
-            updated_expense = form.save()
-
-            # 카테고리가 변경되었고,
-            # 기존 카테고리가 사용자 생성 카테고리이며,
-            # 더 이상 사용하는 지출이 없다면 자동 삭제합니다.
-            if old_category != updated_expense.category:
-                _delete_unused_custom_category(old_category)
+            form.save()
 
             messages.info(request, "지출을 수정했습니다.")
             return redirect("expense_list")
@@ -238,21 +258,11 @@ def expense_update(request, pk):
     )
 
 
+@require_POST
 def expense_delete(request, pk):
-    if request.method == "POST":
-        expense = get_object_or_404(Expense, pk=pk)
-
-        # 지출을 삭제하기 전에 카테고리를 기억합니다.
-        category = expense.category
-
-        expense.delete()
-
-        # 기본 카테고리는 절대 삭제하지 않습니다.
-        # 사용자 생성 카테고리만 사용 중인 지출이 0건이면 자동 삭제합니다.
-        _delete_unused_custom_category(category)
-
-        messages.warning(request, "지출을 삭제했습니다.")
-
+    expense = get_object_or_404(Expense, pk=pk)
+    expense.delete()
+    messages.warning(request, "지출을 삭제했습니다.")
     return redirect("expense_list")
 
 def category_create(request):
@@ -277,6 +287,9 @@ def category_create(request):
             },
             status=400,
         )
+
+    if len(name) > 30:
+        return JsonResponse({"success": False, "message": "카테고리는 30자까지 입력할 수 있어요."}, status=400)
 
     # 이미 존재하는 카테고리명은 새로 만들 수 없습니다.
     existing_category = Category.objects.filter(
@@ -348,3 +361,66 @@ def category_create(request):
             },
         }
     )
+
+
+def _build_home_context():
+    today = timezone.localdate()
+    month = today.replace(day=1)
+    end = today.replace(day=calendar.monthrange(today.year, today.month)[1])
+    total = Expense.objects.filter(date__range=(month, today)).aggregate(value=Sum("amount"))["value"] or 0
+    previous_end = month - timedelta(days=1)
+    previous_start = previous_end.replace(day=1)
+    previous_cutoff = previous_end.replace(day=min(today.day, previous_end.day))
+    previous = Expense.objects.filter(date__range=(previous_start, previous_cutoff)).aggregate(value=Sum("amount"))["value"] or 0
+    budget = MonthlyBudget.objects.filter(month=month).first()
+    remaining = budget.amount - total if budget else None
+    days_left = (end - today).days + 1
+    return {
+        "today": today, "month_total": total, "month_budget": budget,
+        "remaining": remaining, "over_budget": abs(remaining) if remaining is not None and remaining < 0 else 0,
+        "budget_percent": min(100, round(total / budget.amount * 100)) if budget else 0,
+        "budget_used_percent": round(total / budget.amount * 100) if budget else 0,
+        "daily_available": max(0, remaining) // days_left if budget else None,
+        "days_left": days_left, "previous_total": previous,
+        "month_difference": abs(total - previous), "spending_increased": total > previous,
+        "today_total": Expense.objects.filter(date=today).aggregate(value=Sum("amount"))["value"] or 0,
+    }
+
+
+def budget_settings(request):
+    month = timezone.localdate().replace(day=1)
+    raw_month = request.GET.get("month", "")
+    if raw_month:
+        try:
+            month = datetime.strptime(raw_month, "%Y-%m").date()
+        except ValueError:
+            return JsonResponse({"message": "올바른 월을 선택해 주세요."}, status=400)
+    budget = MonthlyBudget.objects.filter(month=month).first()
+    form = BudgetForm(request.POST if request.method == "POST" else None, initial={"month": month.strftime("%Y-%m"), "amount": budget.amount if budget else None})
+    ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    if request.method == "POST" and form.is_valid():
+        MonthlyBudget.objects.update_or_create(month=form.cleaned_data["month"], defaults={"amount": form.cleaned_data["amount"]})
+        if ajax:
+            return JsonResponse({"success": True, "home_html": render_to_string("expenses/_home.html", _build_home_context(), request=request)})
+        messages.success(request, "월 예산을 저장했습니다.")
+        return redirect("expense_list")
+    if ajax:
+        return JsonResponse({"success": False, "form_html": render_to_string("expenses/_budget_form.html", {"form": form}, request=request)})
+    return render(request, "expenses/budget_form.html", {"form": form})
+
+
+def expense_export(request):
+    context = _build_list_context(request)
+    if context["filter_errors"]:
+        return HttpResponse("날짜 필터를 확인해 주세요.", status=400, content_type="text/plain; charset=utf-8")
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="sseum-expenses.csv"'
+    response.write("\ufeff")
+    writer = csv.writer(response)
+    writer.writerow(["ID", "날짜", "카테고리", "내용", "금액(원)"])
+    def cell(value):
+        value = str(value)
+        return "'" + value if value.lstrip().startswith(("=", "+", "-", "@")) or value.startswith(("\t", "\r", "\n")) else value
+    for expense in context["filtered_expenses"].iterator():
+        writer.writerow([expense.pk, expense.date.isoformat(), cell(expense.category.name if expense.category else "미분류"), cell(expense.description), expense.amount])
+    return response
