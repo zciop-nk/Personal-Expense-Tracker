@@ -6,12 +6,24 @@
 {% block content %}
 
 <div id="homeArea">{% include "expenses/_home.html" %}</div>
-<div class="ledger-heading" id="ledger"><div><p class="eyebrow">MY SPENDING</p><h2>나의 지출 살펴보기</h2></div><p>기간과 카테고리로 기록을 돌아보세요.</p></div>
+<div class="ledger-heading" id="ledger">
+    <div>
+        <p class="eyebrow">MY SPENDING</p>
+        <h2
+            id="mobileSectionTitle"
+            data-default-label="나의 지출 살펴보기"
+            data-ledger-label="내 가계부"
+            data-analysis-label="나의 지출 분석"
+        >나의 지출 살펴보기</h2>
+    </div>
+    <p>기간과 카테고리로 기록을 돌아보세요.</p>
+</div>
 <section class="filter-dock" aria-label="지출 필터">
     <form id="filterForm" method="get">
         <input type="hidden" name="date_from" id="dateFrom" value="{{ date_from }}">
         <input type="hidden" name="date_to" id="dateTo" value="{{ date_to }}">
         <input type="hidden" name="period" id="periodValue" value="{{ period }}">
+        <input type="hidden" name="page_size" id="pageSize" value="{{ page_size }}">
 
         <div class="ledger-search">
             <div class="search-field"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4 4"></path></svg><input type="search" name="q" id="expenseSearch" value="{{ query }}" maxlength="80" placeholder="어디에 썼나요? 내용 또는 카테고리 검색" aria-label="지출 검색"><button type="button" id="clearSearch" class="search-clear" aria-label="검색어 지우기" {% if not query %}hidden{% endif %}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 6 8 8M14 6l-8 8"/></svg></button></div>
@@ -50,6 +62,17 @@
                         <path d="M4.5 4.5v4h4"></path>
                     </svg>
                 </button>
+
+                <button
+                    type="button"
+                    class="mobile-filter-more"
+                    data-mobile-filter-more
+                    aria-expanded="false"
+                    aria-controls="mobileFilterExtras"
+                    aria-label="추가 필터 메뉴"
+                >
+                    <span aria-hidden="true">•••</span>
+                </button>
             </div>
 
             <div class="quick-periods" aria-label="빠른 기간 선택">
@@ -57,6 +80,16 @@
                 <button type="button" class="quick-period" data-period="3m">최근 3개월</button>
                 <button type="button" class="quick-period" data-period="6m">최근 6개월</button>
                 <button type="button" class="quick-period" data-period="all">전체</button>
+            </div>
+
+            <div class="mobile-filter-extras" id="mobileFilterExtras">
+                <a
+                    class="mobile-export-button"
+                    href="{% url 'expense_export' %}?{{ filter_query }}"
+                >
+                    CSV 내보내기
+                    <span aria-hidden="true">↓</span>
+                </a>
             </div>
         </div>
 

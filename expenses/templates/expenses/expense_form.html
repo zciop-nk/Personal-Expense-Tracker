@@ -19,7 +19,7 @@
                 {% endif %}
             </p>
         </div>
-        <img src="{% static 'expenses/images/logo-sseum-symbol.png' %}" alt="" class="form-brand-symbol" aria-hidden="true">
+        <img src="{% static 'expenses/images/logo-sseum.svg' %}" alt="" class="form-brand-symbol" aria-hidden="true">
     </div>
 
     <form class="panel expense-form" method="post" novalidate>
@@ -161,6 +161,11 @@
                     {{ form.amount }}
                     <span>원</span>
                 </div>
+                <p
+                    class="money-input-guide"
+                    data-money-guide
+                    aria-live="polite"
+                ></p>
                 {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
             </div>
         </div>

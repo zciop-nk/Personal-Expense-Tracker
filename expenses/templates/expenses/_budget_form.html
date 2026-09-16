@@ -7,7 +7,17 @@
         <div class="budget-month-picker" id="budgetMonthPicker" hidden><div class="month-picker-head"><button type="button" data-year-step="-1" aria-label="이전 연도">‹</button><strong data-picker-year></strong><button type="button" data-year-step="1" aria-label="다음 연도">›</button></div><div class="month-picker-grid" data-month-grid></div></div>
         {% for error in form.month.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </div>
-    <div class="field-group"><label class="field-label" for="id_amount">월 예산</label><div class="amount-input-wrap">{{ form.amount }}<span>원</span></div>{% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
+    <div class="field-group"><label class="field-label" for="id_amount">월 예산</label>
+        <div class="amount-input-wrap">
+            {{ form.amount }}
+            <span>원</span>
+        </div>
+        <p
+            class="money-input-guide"
+            data-money-guide
+            aria-live="polite"
+        ></p>
+        {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
     <p class="budget-help">월을 바꾸면 해당 월에 저장된 예산을 불러와요.<br>홈에는 이번 달 예산이 표시돼요.</p>
     <p class="field-error" data-budget-error role="alert" hidden></p>
     <div class="form-actions"><a href="{% url 'expense_list' %}" class="secondary-button" data-budget-close>취소</a><button type="submit" class="primary-button">예산 저장</button></div>

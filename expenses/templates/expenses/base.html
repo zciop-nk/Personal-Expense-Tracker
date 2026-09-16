@@ -9,12 +9,12 @@
     <link rel="icon" type="image/png" href="{% static 'expenses/images/favicon-sseum.png' %}">
     <link rel="apple-touch-icon" href="{% static 'expenses/images/favicon-sseum.png' %}">
 
-    <link rel="stylesheet" href="{% static 'expenses/css/sseum.9fbbef0cd3be.css' %}">
+    <link rel="stylesheet" href="{% static 'expenses/css/base.css' %}">
 
 
-    <script src="{% static 'expenses/js/ledger.56b4577d5c13.js' %}" defer></script>
-    <script src="{% static 'expenses/js/charts.17c471405918.js' %}" defer></script>
-    <script src="{% static 'expenses/js/drawer.4d722f8d7531.js' %}" defer></script>
+    <script src="{% static 'expenses/js/ledger.js' %}" defer></script>
+    <script src="{% static 'expenses/js/charts.js' %}" defer></script>
+    <script src="{% static 'expenses/js/drawer.js' %}" defer></script>
 </head>
 
 <body>
@@ -24,8 +24,8 @@
             <a class="brand" href="{% url 'expense_list' %}" aria-label="씀 SSEUM 홈">
                 <img
                     class="brand-logo"
-                    src="{% static 'expenses/images/logo-sseum-horizontal.png' %}"
-                    alt="씀 SSEUM"
+                    src="{% static 'expenses/images/logo-sseum.svg' %}"
+                    alt="씀"
                 >
             </a>
 
@@ -64,7 +64,34 @@
     </main>
 
     <footer class="page-shell app-footer"><span>씀 · SSEUM</span><span>나를 위한, 나다운 소비 기록.</span></footer>
-    <nav class="mobile-nav" aria-label="모바일 메뉴"><a href="{% url 'expense_list' %}"><span aria-hidden="true">▤</span>내 가계부</a><a class="mobile-create" href="{% url 'expense_create' %}" data-expense-drawer-link><span aria-hidden="true">＋</span>지출 기록</a><a href="{% url 'budget_settings' %}" data-budget-open><span aria-hidden="true">₩</span>예산 관리</a></nav>
+    <nav class="mobile-nav" aria-label="모바일 메뉴">
+        <a href="#ledger" data-mobile-tab="ledger" aria-current="page">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 3h14v18H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Zm0 0v18M10 8h6M10 12h6"></path>
+            </svg>
+            <span class="mobile-nav-label">가계부</span>
+        </a>
+
+        <a
+            class="mobile-create"
+            href="{% url 'expense_create' %}"
+            data-expense-drawer-link
+            aria-label="지출 기록 추가"
+        >
+            <span class="mobile-create-button" aria-hidden="true">
+                <svg class="mobile-create-icon" viewBox="0 0 24 24">
+                    <path d="M12 4v16M4 12h16"></path>
+                </svg>
+            </span>
+        </a>
+
+        <a href="#analysis" data-mobile-tab="analysis">
+            <svg class="mobile-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 3v17h17M8 15v-4M13 15V7M18 15V4"></path>
+            </svg>
+            <span class="mobile-nav-label">분석</span>
+        </a>
+    </nav>
     <div class="expense-drawer-layer" id="expenseDrawerLayer" hidden>
         <button
             class="expense-drawer-backdrop"
@@ -113,7 +140,14 @@
     </div>
 
     <dialog id="budgetDialog" class="budget-dialog" aria-labelledby="budgetTitle">
-        <div class="budget-dialog-head"><div><h2 id="budgetTitle">월 예산 설정</h2><p>나에게 맞는 소비 기준을 정해요.</p></div><button type="button" class="budget-close" aria-label="예산 설정 닫기" data-budget-close>×</button></div>
+        <div class="budget-dialog-head">
+            <div>
+                <p class="budget-dialog-eyebrow">BUDGET</p>
+                <h2 id="budgetTitle">월 예산 설정</h2>
+                <p>나에게 맞는 소비 기준을 정해요.</p>
+            </div>
+            <button type="button" class="budget-close" aria-label="예산 설정 닫기" data-budget-close>×</button>
+        </div>
         <div id="budgetDialogBody"></div>
     </dialog>
     <div class="app-modal" id="appModal" hidden aria-hidden="true">

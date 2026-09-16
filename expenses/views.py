@@ -158,13 +158,36 @@ def _build_list_context(request):
             }
         )
 
-    page = Paginator(expenses, 30).get_page(request.GET.get("page"))
+    page_size = 15 if request.GET.get("page_size") == "15" else 30
+    paginator = Paginator(expenses, page_size)
+    page = paginator.get_page(request.GET.get("page"))
+    # Pagination UX:
+    # - 10페이지 이하는 숫자를 전부 보여 줍니다.
+    # - 10페이지를 넘으면 현재 위치를 포함한 최대 10개의 연속 숫자를 보여 주고
+    #   바깥 구간만 말줄임표로 축약합니다.
+    total_pages = paginator.num_pages
+
+    if total_pages <= 10:
+        page_numbers = list(range(1, total_pages + 1))
+    elif page.number <= 10:
+        page_numbers = list(range(1, 11)) + ["…", total_pages]
+    elif page.number >= total_pages - 9:
+        page_numbers = [1, "…"] + list(range(total_pages - 9, total_pages + 1))
+    else:
+        start_page = max(2, page.number - 4)
+        end_page = min(total_pages - 1, start_page + 9)
+        start_page = max(2, end_page - 9)
+        page_numbers = [1, "…"] + list(range(start_page, end_page + 1)) + ["…", total_pages]
+
     params = request.GET.copy()
     params.pop("page", None)
+
     return {
         "expenses": page.object_list,
         "filtered_expenses": expenses,
         "page_obj": page,
+        "page_numbers": page_numbers,
+        "page_size": page_size,
         "filter_query": params.urlencode(),
         "query": query,
         "filter_errors": filter_errors,
@@ -188,7 +211,7 @@ def _build_list_context(request):
 
 def expense_list(request):
     context = _build_list_context(request)
-    context.update(_build_home_context())
+    context.update(_build_home_context(request.GET.get("home_month", "")))
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         results_html = render_to_string(
@@ -363,28 +386,122 @@ def category_create(request):
     )
 
 
-def _build_home_context():
+def _shift_month(month, offset):
+    index = (month.year * 12 + month.month - 1) + offset
+    return date(index // 12, index % 12 + 1, 1)
+
+
+def _parse_home_month(raw_month):
+    current = timezone.localdate().replace(day=1)
+
+    if not raw_month:
+        return current
+
+    try:
+        month = datetime.strptime(raw_month, "%Y-%m").date().replace(day=1)
+    except ValueError:
+        return current
+
+    # 지출은 오늘 이후 날짜를 저장하지 않으므로 홈 탐색도 이번 달까지만 허용합니다.
+    return min(month, current)
+
+
+def _build_home_context(raw_month=""):
     today = timezone.localdate()
-    month = today.replace(day=1)
-    end = today.replace(day=calendar.monthrange(today.year, today.month)[1])
-    total = Expense.objects.filter(date__range=(month, today)).aggregate(value=Sum("amount"))["value"] or 0
-    previous_end = month - timedelta(days=1)
-    previous_start = previous_end.replace(day=1)
-    previous_cutoff = previous_end.replace(day=min(today.day, previous_end.day))
-    previous = Expense.objects.filter(date__range=(previous_start, previous_cutoff)).aggregate(value=Sum("amount"))["value"] or 0
+    current_month = today.replace(day=1)
+    month = _parse_home_month(raw_month)
+    is_current_month = month == current_month
+
+    month_last_day = calendar.monthrange(month.year, month.month)[1]
+    month_end = month.replace(day=month_last_day)
+    period_end = today if is_current_month else month_end
+
+    month_expenses = Expense.objects.filter(date__range=(month, period_end))
+    total = month_expenses.aggregate(value=Sum("amount"))["value"] or 0
+
+    previous_start = _shift_month(month, -1)
+    previous_last_day = calendar.monthrange(previous_start.year, previous_start.month)[1]
+
+    if is_current_month:
+        previous_cutoff_day = min(today.day, previous_last_day)
+        previous_end = previous_start.replace(day=previous_cutoff_day)
+    else:
+        previous_end = previous_start.replace(day=previous_last_day)
+
+    previous_qs = Expense.objects.filter(date__range=(previous_start, previous_end))
+    previous = previous_qs.aggregate(value=Sum("amount"))["value"] or 0
+    has_previous_expenses = previous_qs.exists()
+
     budget = MonthlyBudget.objects.filter(month=month).first()
     remaining = budget.amount - total if budget else None
-    days_left = (end - today).days + 1
+
+    if is_current_month:
+        days_left = (month_end - today).days + 1
+        secondary_metric_label = "오늘 쓴 돈"
+        secondary_metric_value = (
+            Expense.objects.filter(date=today).aggregate(value=Sum("amount"))["value"] or 0
+        )
+    else:
+        days_left = 0
+        secondary_metric_label = "하루 평균"
+        secondary_metric_value = int(round(total / month_last_day)) if month_last_day else 0
+
+    selected_month_key = month.strftime("%Y-%m")
+    current_month_key = current_month.strftime("%Y-%m")
+
     return {
-        "today": today, "month_total": total, "month_budget": budget,
-        "remaining": remaining, "over_budget": abs(remaining) if remaining is not None and remaining < 0 else 0,
+        "today": today,
+        "selected_month": month,
+        "selected_month_key": selected_month_key,
+        "selected_month_label": f"{month.year}년 {month.month}월",
+        "selected_month_year": month.year,
+        "current_month_key": current_month_key,
+        "is_current_month": is_current_month,
+        "can_go_next_month": month < current_month,
+        "month_heading": (
+            f"{month.month}월, 지금까지 쓴 돈"
+            if is_current_month
+            else f"{month.month}월에 쓴 돈"
+        ),
+        "month_status_label": "오늘까지" if is_current_month else "월 전체",
+        "comparison_label": "지난달 같은 기간보다" if is_current_month else "이전 달보다",
+        "month_total": total,
+        "month_budget": budget,
+        "remaining": remaining,
+        "over_budget": abs(remaining) if remaining is not None and remaining < 0 else 0,
         "budget_percent": min(100, round(total / budget.amount * 100)) if budget else 0,
         "budget_used_percent": round(total / budget.amount * 100) if budget else 0,
-        "daily_available": max(0, remaining) // days_left if budget else None,
-        "days_left": days_left, "previous_total": previous,
-        "month_difference": abs(total - previous), "spending_increased": total > previous,
-        "today_total": Expense.objects.filter(date=today).aggregate(value=Sum("amount"))["value"] or 0,
+        "daily_available": (
+            max(0, remaining) // days_left
+            if budget and is_current_month and days_left
+            else None
+        ),
+        "days_left": days_left,
+        "previous_total": previous,
+        "has_previous_expenses": has_previous_expenses,
+        "month_difference": abs(total - previous),
+        "spending_increased": total > previous,
+        "secondary_metric_label": secondary_metric_label,
+        "secondary_metric_value": secondary_metric_value,
+        # 기존 테스트/템플릿 호환용
+        "today_total": (
+            Expense.objects.filter(date=today).aggregate(value=Sum("amount"))["value"] or 0
+        ),
     }
+
+
+def home_month_summary(request):
+    context = _build_home_context(request.GET.get("month", ""))
+    return JsonResponse(
+        {
+            "home_html": render_to_string(
+                "expenses/_home.html",
+                context,
+                request=request,
+            ),
+            "selected_month": context["selected_month_key"],
+        }
+    )
 
 
 def budget_settings(request):
@@ -399,9 +516,23 @@ def budget_settings(request):
     form = BudgetForm(request.POST if request.method == "POST" else None, initial={"month": month.strftime("%Y-%m"), "amount": budget.amount if budget else None})
     ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     if request.method == "POST" and form.is_valid():
-        MonthlyBudget.objects.update_or_create(month=form.cleaned_data["month"], defaults={"amount": form.cleaned_data["amount"]})
+        saved_month = form.cleaned_data["month"]
+        MonthlyBudget.objects.update_or_create(
+            month=saved_month,
+            defaults={"amount": form.cleaned_data["amount"]},
+        )
         if ajax:
-            return JsonResponse({"success": True, "home_html": render_to_string("expenses/_home.html", _build_home_context(), request=request)})
+            return JsonResponse(
+                {
+                    "success": True,
+                    "home_html": render_to_string(
+                        "expenses/_home.html",
+                        _build_home_context(saved_month.strftime("%Y-%m")),
+                        request=request,
+                    ),
+                    "selected_month": saved_month.strftime("%Y-%m"),
+                }
+            )
         messages.success(request, "월 예산을 저장했습니다.")
         return redirect("expense_list")
     if ajax:

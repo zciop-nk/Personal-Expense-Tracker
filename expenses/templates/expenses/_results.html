@@ -1,14 +1,14 @@
 {% load static %}
 {% if query %}<div class="search-result-status" role="status"><span><strong>“{{ query }}”</strong> 검색 결과 · {{ stats.count }}건</span><button type="button" data-search-reset>검색 해제 ×</button></div>{% endif %}
 {% if filter_errors %}<div class="form-error-box" role="alert">{% for error in filter_errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
-<section class="summary-grid" id="summaryArea">
+<section class="summary-grid mobile-analysis-only" id="summaryArea">
     {% if dashboard_type == "D" %}
         <article class="summary-card comparison-summary-card">
             <span class="summary-label">총 지출 비교</span>
             <div class="summary-compare-list">
                 {% for item in comparison_rows %}
                     <div class="summary-compare-row">
-                        <span class="mini-badge category-badge" data-category-chip="{{ item.name }}" data-color-key="{{ item.color_key }}">{{ item.name }}</span>
+                        <span class="mini-badge category-badge" data-category-chip="{{ item.name }}" data-color-key="{{ item.color_key }}" title="{{ item.name }}">{{ item.name }}</span>
                         <strong>{{ item.total|floatformat:"0g" }}원</strong>
                     </div>
                 {% endfor %}
@@ -19,7 +19,7 @@
             <div class="summary-compare-list">
                 {% for item in comparison_rows %}
                     <div class="summary-compare-row">
-                        <span class="summary-compare-name">{{ item.name }}</span>
+                        <span class="summary-compare-name" title="{{ item.name }}">{{ item.name }}</span>
                         <strong>{{ item.count }}건</strong>
                     </div>
                 {% endfor %}
@@ -30,7 +30,7 @@
             <div class="summary-compare-list">
                 {% for item in comparison_rows %}
                     <div class="summary-compare-row">
-                        <span class="summary-compare-name">{{ item.name }}</span>
+                        <span class="summary-compare-name" title="{{ item.name }}">{{ item.name }}</span>
                         <strong>{{ item.average|floatformat:"0g" }}원</strong>
                     </div>
                 {% endfor %}
@@ -82,7 +82,7 @@
 </section>
 
 <section class="content-grid" id="contentArea">
-    <article class="panel">
+    <article class="panel mobile-ledger-only">
         <div class="section-heading expense-heading">
             <div>
                 <p class="eyebrow">EXPENSES</p>
@@ -124,21 +124,50 @@
                     </section>
                 {% endfor %}
             </div>
-            {% if page_obj.has_other_pages %}<nav class="pagination" aria-label="지출 목록 페이지">
-                {% if page_obj.has_previous %}<a href="?{{ filter_query }}&page={{ page_obj.previous_page_number }}#ledger">← 이전</a>{% endif %}
-                <span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 페이지</span>
-                {% if page_obj.has_next %}<a href="?{{ filter_query }}&page={{ page_obj.next_page_number }}#ledger">다음 →</a>{% endif %}
-            </nav>{% endif %}
+            {% if page_obj.has_other_pages %}
+                <nav class="pagination pagination-numbered" aria-label="지출 목록 페이지">
+                    {% if page_obj.has_previous %}
+                        <a
+                            class="pagination-arrow"
+                            href="?{{ filter_query }}&page={{ page_obj.previous_page_number }}#ledger"
+                            aria-label="이전 페이지"
+                        >‹</a>
+                    {% endif %}
+
+                    <div class="pagination-pages">
+                        {% for number in page_numbers %}
+                            {% if number == "…" %}
+                                <span class="pagination-ellipsis" aria-hidden="true">…</span>
+                            {% elif number == page_obj.number %}
+                                <span class="pagination-page is-current" aria-current="page">{{ number }}</span>
+                            {% else %}
+                                <a
+                                    class="pagination-page"
+                                    href="?{{ filter_query }}&page={{ number }}#ledger"
+                                >{{ number }}</a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    {% if page_obj.has_next %}
+                        <a
+                            class="pagination-arrow"
+                            href="?{{ filter_query }}&page={{ page_obj.next_page_number }}#ledger"
+                            aria-label="다음 페이지"
+                        >›</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
         {% else %}
             <div class="empty-state">
-                <img class="empty-state-logo" src="{% static 'expenses/images/logo-sseum-symbol.png' %}" alt="" aria-hidden="true">
+                <img class="empty-state-logo" src="{% static 'expenses/images/logo-sseum.svg' %}" alt="" aria-hidden="true">
                 <strong>조건에 맞는 지출이 없어요.</strong>
                 <p>필터를 바꾸거나 새로운 지출을 추가해 보세요.</p><a class="primary-button" href="{% url 'expense_create' %}" data-expense-drawer-link>첫 지출 기록하기</a>
             </div>
         {% endif %}
     </article>
 
-    <aside class="side-stack">
+    <aside class="side-stack mobile-analysis-only" id="mobileAnalysisPanel" data-mobile-analysis>
         {% if dashboard_type == "A" %}
             <article class="panel dashboard-card">
                 <div class="section-heading"><div><p class="eyebrow">CATEGORY</p><h2>카테고리 구성</h2></div></div>
@@ -182,7 +211,7 @@
                 {% else %}<p class="muted">표시할 데이터가 없어요.</p>{% endif %}
             </article>
 
-            <article class="panel dashboard-card">
+            <article class="panel dashboard-card comparison-trend-card">
                 <div class="section-heading trend-heading">
                     <div><p class="eyebrow">{% if is_short_period %}DAILY{% else %}MONTHLY{% endif %}</p><h2>{{ selected_category.name }} 기간별 추이</h2></div>
                     <div class="trend-meta adaptive-trend-meta"><span class="trend-year" data-adaptive-period-label></span><span class="trend-unit" data-adaptive-unit></span></div>
@@ -231,7 +260,7 @@
                     <div class="comparison-metrics">
                         {% for item in comparison_rows %}
                             <div class="comparison-category" data-color-key="{{ item.color_key }}">
-                                <div class="comparison-category-head"><span class="comparison-dot"></span><strong>{{ item.name }}</strong></div>
+                                <div class="comparison-category-head"><span class="comparison-dot"></span><strong title="{{ item.name }}">{{ item.name }}</strong></div>
                                 <div class="comparison-metric-row"><span>총 지출</span><strong>{{ item.total|floatformat:"0g" }}원</strong></div>
                                 <div class="comparison-metric-row"><span>지출 건수</span><strong>{{ item.count }}건</strong></div>
                                 <div class="comparison-metric-row"><span>평균 지출</span><strong>{{ item.average|floatformat:"0g" }}원</strong></div>
@@ -241,7 +270,7 @@
                 {% else %}<p class="muted">표시할 데이터가 없어요.</p>{% endif %}
             </article>
 
-            <article class="panel dashboard-card">
+            <article class="panel dashboard-card comparison-trend-card">
                 <div class="section-heading trend-heading">
                     <div><p class="eyebrow">COMPARE TREND</p><h2>기간별 비교 추이</h2></div>
                     <div class="trend-meta comparison-trend-meta"><span class="trend-year" data-comparison-period-label></span><span class="trend-unit" data-comparison-unit></span></div>

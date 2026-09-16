@@ -1,25 +1,228 @@
+{% load static %}
 <section class="money-home" aria-labelledby="homeTitle">
     <div class="home-intro">
-        <div><p class="home-eyebrow">MY MONEY, MY PACE.</p><h1 id="homeTitle">오늘의 씀, 내일의 여유.</h1><p class="home-subtitle">작은 기록으로 만들어가는 나다운 소비 생활</p></div>
-        <span class="home-date">{{ today|date:"Y.m.d" }} <span>{{ today|date:"l" }}</span></span>
+        <div class="home-hero-copy">
+            <p class="home-eyebrow">SSEUM · PERSONAL EXPENSE TRACKER</p>
+
+            <h1 id="homeTitle" class="home-title">
+                <span class="home-title-small">
+                    기록이 <span class="home-highlight">습관</span>이 되는
+                </span>
+                <span class="home-title-large">나의 지출 관리</span>
+            </h1>
+        </div>
+
+        <div
+            class="home-month-nav"
+            data-home-month-nav
+            data-selected-month="{{ selected_month_key }}"
+            data-current-month="{{ current_month_key }}"
+        >
+            <button
+                type="button"
+                class="home-month-arrow"
+                data-home-month-step="-1"
+                aria-label="이전 달 보기"
+            >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m14.5 6-6 6 6 6"></path>
+                </svg>
+            </button>
+
+            <div class="home-month-select-wrap">
+                <button
+                    type="button"
+                    class="home-month-select"
+                    data-home-month-toggle
+                    aria-expanded="false"
+                    aria-controls="homeMonthPicker"
+                >
+                    <span>{{ selected_month_label }}</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m8 10 4 4 4-4"></path>
+                    </svg>
+                </button>
+
+                <div class="home-month-picker" id="homeMonthPicker" hidden>
+                    <div class="home-month-picker-head">
+                        <button
+                            type="button"
+                            class="home-month-picker-arrow"
+                            data-home-year-step="-1"
+                            aria-label="이전 연도"
+                        >‹</button>
+
+                        <strong data-home-picker-year>{{ selected_month_year }}년</strong>
+
+                        <button
+                            type="button"
+                            class="home-month-picker-arrow"
+                            data-home-year-step="1"
+                            aria-label="다음 연도"
+                        >›</button>
+                    </div>
+
+                    <div
+                        class="home-month-picker-grid"
+                        data-home-month-grid
+                        data-picker-year="{{ selected_month_year }}"
+                    ></div>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                class="home-month-arrow"
+                data-home-month-step="1"
+                aria-label="다음 달 보기"
+                {% if not can_go_next_month %}disabled{% endif %}
+            >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m9.5 6 6 6-6 6"></path>
+                </svg>
+            </button>
+
+            <button
+                type="button"
+                class="home-current-month"
+                data-home-current
+                {% if is_current_month %}disabled{% endif %}
+            >
+                이번 달
+            </button>
+        </div>
     </div>
+
     <div class="home-overview">
         <article class="month-spend">
-            <div class="spend-top"><span class="month-label">{{ today|date:"n" }}월, 지금까지 쓴 돈</span><span class="live-dot">오늘까지</span></div>
-            <p class="month-number">{{ month_total|floatformat:"0g" }}<span>원</span></p>
-            <p class="month-comparison">{% if previous_total %}지난달 같은 기간보다 <strong>{{ month_difference|floatformat:"0g" }}원 {% if spending_increased %}더{% else %}덜{% endif %} 썼어요</strong>{% else %}오늘의 작은 지출부터 차곡차곡 기록해 보세요.{% endif %}</p>
-            <div class="spend-bottom"><div><span>오늘 쓴 돈</span><strong>{{ today_total|floatformat:"0g" }}원</strong></div><a class="ink-button" href="{% url 'expense_create' %}" data-expense-drawer-link>＋ 지출 기록하기 <span aria-hidden="true">↗</span></a></div>
+            <div class="spend-top">
+                <span class="month-label">{{ month_heading }}</span>
+                <span class="live-dot">{{ month_status_label }}</span>
+            </div>
+
+            <p class="month-number">
+                {{ month_total|floatformat:"0g" }}<span>원</span>
+            </p>
+
+            <p class="month-comparison">
+                {% if has_previous_expenses %}
+                    {{ comparison_label }}
+                    {% if month_difference == 0 %}
+                        <strong>같은 금액을 썼어요.</strong>
+                    {% else %}
+                        <strong>
+                            {{ month_difference|floatformat:"0g" }}원
+                            {% if spending_increased %}더{% else %}덜{% endif %} 썼어요
+                        </strong>
+                    {% endif %}
+                {% else %}
+                    비교할 이전 달 기록이 아직 없어요.
+                {% endif %}
+            </p>
+
+            <div class="spend-bottom">
+                <div>
+                    <span>{{ secondary_metric_label }}</span>
+                    <strong>{{ secondary_metric_value|floatformat:"0g" }}원</strong>
+                </div>
+
+                <a
+                    class="ink-button"
+                    href="{% url 'expense_create' %}"
+                    data-expense-drawer-link
+                >
+                    + 지출 기록
+                </a>
+            </div>
         </article>
+
         <article class="budget-card">
-            <div class="budget-heading"><h2>이번 달 예산</h2><a href="{% url 'budget_settings' %}" data-budget-open class="text-link">{% if month_budget %}수정{% else %}설정{% endif %} <span aria-hidden="true">↗</span></a></div>
+            <div class="budget-heading">
+                <div>
+                    <span class="budget-month-kicker">{{ selected_month_label }}</span>
+                    <h2>월 예산</h2>
+                </div>
+
+                <a
+                    href="{% url 'budget_settings' %}?month={{ selected_month_key }}"
+                    data-budget-open
+                    data-budget-month="{{ selected_month_key }}"
+                    class="budget-icon-button"
+                    aria-label="{% if month_budget %}{{ selected_month_label }} 예산 수정{% else %}{{ selected_month_label }} 예산 설정{% endif %}"
+                    title="{% if month_budget %}예산 수정{% else %}예산 설정{% endif %}"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 20h4l11-11-4-4L4 16v4Z"></path>
+                        <path d="m13.5 6.5 4 4"></path>
+                    </svg>
+                </a>
+            </div>
+
             {% if month_budget %}
-                <span class="budget-caption">{% if over_budget %}예산보다 더 쓴 금액{% else %}앞으로 쓸 수 있는 돈{% endif %}</span>
-                <p class="budget-number {% if over_budget %}is-over{% endif %}">{% if over_budget %}{{ over_budget|floatformat:"0g" }}{% else %}{{ remaining|floatformat:"0g" }}{% endif %}<span>원</span></p>
-                <div class="budget-progress" role="progressbar" aria-label="월 예산 사용률" aria-valuenow="{{ budget_percent }}" aria-valuemin="0" aria-valuemax="100" aria-valuetext="예산의 {{ budget_used_percent }}% 사용"><span style="width:{{ budget_percent }}%" class="{% if over_budget %}is-over{% endif %}"></span></div>
-                <div class="budget-meter-label"><span>{{ budget_used_percent }}% 사용</span><span>예산 {{ month_budget.amount|floatformat:"0g" }}원</span></div>
-                <p class="budget-tip">{% if over_budget %}예산을 넘겼어요. 남은 달의 소비를 돌아볼까요?{% else %}오늘 포함 {{ days_left }}일 · 하루 <strong>{{ daily_available|floatformat:"0g" }}원</strong>씩 쓸 수 있어요.{% endif %}</p>
+                <span class="budget-caption">
+                    {% if over_budget %}예산보다 더 쓴 금액{% else %}앞으로 쓸 수 있는 돈{% endif %}
+                </span>
+
+                <p class="budget-number {% if over_budget %}is-over{% endif %}">
+                    {% if over_budget %}
+                        {{ over_budget|floatformat:"0g" }}
+                    {% else %}
+                        {{ remaining|floatformat:"0g" }}
+                    {% endif %}
+                    <span>원</span>
+                </p>
+
+                <div
+                    class="budget-progress"
+                    role="progressbar"
+                    aria-label="월 예산 사용률"
+                    aria-valuenow="{{ budget_percent }}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuetext="예산의 {{ budget_used_percent }}% 사용"
+                >
+                    <span
+                        style="width:{{ budget_percent }}%"
+                        class="{% if over_budget %}is-over{% endif %}"
+                    ></span>
+                </div>
+
+                <div class="budget-meter-label">
+                    <span>{{ budget_used_percent }}% 사용</span>
+                    <span>예산 {{ month_budget.amount|floatformat:"0g" }}원</span>
+                </div>
+
+                <p class="budget-tip">
+                    {% if over_budget %}
+                        예산을 넘겼어요. 이 달의 소비를 돌아볼까요?
+                    {% elif is_current_month %}
+                        오늘 포함 {{ days_left }}일 · 하루
+                        <strong>{{ daily_available|floatformat:"0g" }}원</strong>씩 쓸 수 있어요.
+                    {% else %}
+                        이 달은 예산의 <strong>{{ budget_used_percent }}%</strong>를 사용했어요.
+                    {% endif %}
+                </p>
             {% else %}
-                <div class="budget-empty-icon" aria-hidden="true">₩</div><h3 class="budget-empty-title">나만의 소비 기준을 정해볼까요?</h3><p class="budget-empty-copy">한 달 예산을 정하면 남은 금액과<br>하루에 쓸 수 있는 돈을 알려드려요.</p><a href="{% url 'budget_settings' %}" data-budget-open class="budget-start">월 예산 설정하기 <span aria-hidden="true">→</span></a>
+                <div class="budget-empty-visual" aria-hidden="true">
+                    <img
+                        src="{% static 'expenses/images/brand-illustrations/budget.svg' %}"
+                        alt=""
+                        class="budget-empty-illustration"
+                    >
+                </div>
+                <h3 class="budget-empty-title">나만의 소비 기준을 정해볼까요?</h3>
+                <p class="budget-empty-copy">
+                    월 예산을 정하면 남은 금액과 소비 흐름을 더 쉽게 확인할 수 있어요.
+                </p>
+
+                <a
+                    href="{% url 'budget_settings' %}?month={{ selected_month_key }}"
+                    data-budget-open
+                    data-budget-month="{{ selected_month_key }}"
+                    class="budget-start-button"
+                >
+                    월 예산 설정
+                </a>
             {% endif %}
         </article>
     </div>

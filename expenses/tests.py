@@ -128,6 +128,32 @@ class LedgerTests(TestCase):
         self.assertIn('results_html', response.json())
         self.assertIn('12,000', response.json()['home_html'])
 
+
+    def test_home_month_navigation_returns_selected_month_summary(self):
+        self.create(date="2026-08-01", amount=31000)
+        MonthlyBudget.objects.create(month="2026-08-01", amount=100000)
+
+        response = self.client.get(
+            "/home/month/",
+            {"month": "2026-08"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["selected_month"], "2026-08")
+        self.assertIn("2026년 8월", payload["home_html"])
+        self.assertIn("31,000", payload["home_html"])
+        self.assertIn("69,000", payload["home_html"])
+
+        # 이번 달 이후로는 탐색하지 않도록 현재 월로 정규화합니다.
+        future = self.client.get(
+            "/home/month/",
+            {"month": "2026-12"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(future.json()["selected_month"], "2026-09")
+
     def test_category_create_length_duplicate_and_persistence(self):
         self.assertEqual(self.client.post('/categories/create/', {'name':'a'*31}).status_code,400)
         self.assertEqual(self.client.post('/categories/create/', {'name':self.category.name}).status_code,400)

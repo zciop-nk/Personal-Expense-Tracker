@@ -1,190 +1,431 @@
-# 사용성·배치 수정본
+# 씀 / SSEUM
 
-- 예산 관리 탭 제거. 홈 예산 카드의 설정/수정에서 작은 모달을 엽니다.
-- 월 입력 전체를 누르면 12개월 선택기가 열립니다. 연도 이동과 월별 저장값 불러오기를 지원합니다.
-- 금액 증감 화살표 제거, 입력 포커스의 진한 녹색/이중 테두리 완화.
-- 검색어 지우기 버튼, 조회 중 안내, 적용된 검색어·결과 건수·검색 해제 표시.
-- 필터는 지출이 한 건 이상 있는 카테고리만 표시합니다. 기록 입력에서는 모든 카테고리를 선택할 수 있습니다.
-- 목록이 2칸을 점유하던 CSS 충돌 수정. 데스크톱의 목록/그래프 좌우 배치 복원.
-- 목록 15~16px, 필터 14px 중심으로 한글 가독성 개선.
-- 데스크톱 drawer 열기 시 본문 최대 폭 1180px, 왼쪽 최소 여백 44px 유지.
-- 서버 테스트 17개 통과. 별도 DOM 환경에서 예산 모달·월 선택·저장 및 검색·입력 동작 검증.
-- 실제 브라우저의 픽셀 배치·터치 확인은 환경 제한으로 미완료입니다.
+> **기록이 습관이 되는, 나의 지출 관리**
 
-아래 기존 설치 안내대로 적용하세요. 이번에도 데이터베이스는 압축에 포함하지 않습니다.
+씀(SSEUM)은 일상에서 발생하는 지출을 기록하고, 기간·카테고리·내용별 소비 흐름을 한눈에 확인할 수 있는 **개인 지출 관리 웹 서비스**입니다.
+
+단순히 금액을 저장하는 데서 끝나지 않고, 월별 소비 현황과 예산, 카테고리 비중, 지출 추이를 함께 보여 주어 사용자가 자신의 소비 패턴을 자연스럽게 돌아볼 수 있도록 구성했습니다.
 
 ---
 
-# 화면 깨짐 수정본 안내
+## 주요 기능
 
-이전 화면에서는 새 홈 스타일이 적용되지 않았습니다. 수정본은 CSS와 JavaScript에 새로운 파일명을 부여해 이전 `style.css`와 기존 스크립트 캐시가 재사용되지 않도록 했습니다.
+### 1. 지출 기록 관리
 
-## 가장 확실한 적용 방법
+- 지출 **등록 / 수정 / 삭제**
+- 날짜, 카테고리, 내용, 금액 입력
+- 미래 날짜 입력 방지
+- 금액 1원 이상 검증
+- 내용 공백 입력 방지
+- 데스크톱에서는 목록을 보면서 작성할 수 있는 **우측 Drawer UI** 제공
+- 모바일에서는 화면 크기에 맞춘 입력 화면 제공
 
-1. 기존 서버를 Ctrl+C로 종료합니다.
-2. 기존 폴더와 `db.sqlite3`를 백업합니다.
-3. 이번 압축을 **새 폴더**에 풉니다. 기존 폴더 안에 중첩해서 넣지 마세요.
-4. 기존 `db.sqlite3`를 새 폴더의 `manage.py` 옆으로 **복사**합니다. 원본 DB는 그대로 보관합니다.
-5. VS Code에서 새 `manage.py`가 있는 폴더를 열고 아래 명령을 실행합니다.
+### 2. 카테고리 관리
 
-```powershell
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe manage.py migrate
-.venv\Scripts\python.exe manage.py runserver
-```
+기본 카테고리는 다음 10종으로 구성되어 있습니다.
 
-화면 주소는 `http://127.0.0.1:8000/`입니다. 홈에서 노란 지출 카드와 흰 예산 카드가 보이는지 확인하세요.
-이번 압축에는 DB와 가상환경이 없습니다. 반드시 본인의 DB를 복사해야 이전 기록이 이어집니다.
+- 식비
+- 교통
+- 주거·공과금
+- 생활
+- 쇼핑
+- 건강
+- 문화·여가
+- 교육·자기계발
+- 금융·고정비
+- 반려동물
+
+각 카테고리는 고유한 색상으로 구분되며, 입력 과정에서 기본 키워드를 활용해 카테고리를 찾을 수 있습니다.
+
+기본 카테고리에 없는 항목은 **사용자 정의 카테고리**로 새롭게 생성할 수 있습니다.
+
+### 3. 검색 및 필터
+
+지출이 많아져도 원하는 기록을 빠르게 찾을 수 있도록 다음 필터를 제공합니다.
+
+- 내용 검색
+- 카테고리 검색
+- 카테고리 다중 선택
+- 시작일 / 종료일 기간 선택
+- 이번 달
+- 최근 3개월
+- 최근 6개월
+- 전체 기간
+- 선택한 필터를 chip 형태로 표시 및 개별 해제
+
+검색과 필터 변경은 화면 전체를 다시 구성하지 않고 결과 영역을 갱신하는 방식으로 동작합니다.
+
+### 4. 페이지네이션
+
+많은 지출 데이터를 한 화면에 과도하게 쌓지 않도록 페이지네이션을 적용했습니다.
+
+- 데스크톱: 기본 30건 단위
+- 모바일: 15건 단위
+- 10페이지 이하: 전체 페이지 번호 표시
+- 10페이지 초과: 현재 위치를 기준으로 필요한 구간만 표시
+
+### 5. 월별 홈 요약
+
+상단 홈 영역에서는 선택한 월의 소비 상황을 빠르게 확인할 수 있습니다.
+
+- 월별 총 지출
+- 이전 달 또는 지난달 같은 기간과 비교
+- 오늘 지출 / 과거 월의 하루 평균
+- 이전·다음 월 이동
+- 이번 달로 빠르게 돌아오기
+
+미래 월로는 이동하지 않도록 제한되어 있습니다.
+
+### 6. 월 예산 관리
+
+월별 예산을 설정하고 현재 지출과 비교할 수 있습니다.
+
+- 월별 예산 등록 및 수정
+- 사용 금액 / 남은 금액 표시
+- 예산 사용률 progress bar
+- 현재 월의 남은 일수 계산
+- 하루에 사용할 수 있는 금액 안내
+- 예산 초과 상태 표시
+
+예산은 월 단위로 각각 저장됩니다.
 
 ---
 
-# 씀 · SSEUM
+## 적응형 지출 분석 대시보드
 
-나를 위한 개인 지출 가계부. **Django + SQLite + HTML/CSS/JavaScript**로 동작합니다.
-로그인 없이 사용하는 1인 로컬 프로그램이며, PostgreSQL 연결을 위한 설정도 준비되어 있습니다.
+선택한 필터 조건에 따라 같은 화면에서도 필요한 분석이 자동으로 달라집니다.
 
-## 기존 프로젝트에서 업데이트하기
+| 유형 | 조건 | 제공 분석 |
+| --- | --- | --- |
+| **A. 전체 분석** | 카테고리 미선택 또는 3개 이상, 일반 기간 | 카테고리 구성, 월별 지출 추이 |
+| **B. 단일 카테고리 분석** | 카테고리 1개 선택 | 내용별 지출 분석, 해당 카테고리 기간별 추이 |
+| **C. 단기 기간 분석** | 명시적인 기간이 30일 이하 | 기간 카테고리 구성, 일별 지출 추이 |
+| **D. 카테고리 비교** | 카테고리 2개 선택 | 총 지출·건수·평균 비교, 기간별 비교 추이 |
 
-1. 실행 중인 서버를 `Ctrl+C`로 종료합니다.
-2. **기존 폴더를 복사해서 백업합니다. 특히 `db.sqlite3`를 보관하세요.** 이 파일에 기록이 들어 있습니다.
-3. 이 압축 파일의 코드를 기존 프로젝트 폴더에 덮어씁니다. 기존 `.venv`, `.git`, `db.sqlite3`는 유지합니다.
-4. `expenses/static/expenses/css/ui-refresh.css`와 `chart-polish.css`는 `style.css`로 합쳤습니다. 기존 파일이 남아 있어도 로드되지 않으며 삭제해도 됩니다.
-5. VS Code 터미널에서 아래 명령을 실행합니다.
+### 차트 UX
 
-```powershell
-.venv\Scripts\activate
-python -m pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-```
+- 한 화면에 막대 데이터를 최대 **5개 구간**까지 보여 줌
+- 데이터가 더 많으면 가로 스크롤 제공
+- 막대의 하단 값은 간결하게 축약
+- 데스크톱: 막대 hover / focus 시 상세 금액 표시
+- 터치 환경: 막대 터치 시 상세 정보 표시
+- 값이 작아도 데이터 존재 여부를 인지할 수 있도록 최소 시각 높이 보정
+- 긴 내용명은 레이아웃을 밀지 않도록 말줄임 처리
 
-브라우저에서 `http://127.0.0.1:8000/`을 열고 `Ctrl+F5`로 새 스타일을 불러옵니다.
-기존 migration 파일 0001~0009는 삭제하거나 합치지 마세요. 새 0010 migration이 월 예산 테이블과 조회 인덱스를 추가합니다.
+---
 
-## 처음 실행하기
+## 반응형 UX
 
-Python 3.12 이상을 권장합니다. VS Code에서 `manage.py`가 있는 폴더를 열고 실행하세요.
+씀은 데스크톱과 모바일에서 동일한 기능을 단순 축소하지 않고, 화면 크기에 맞게 정보 구조를 다르게 제공합니다.
 
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-python -m pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-```
+### Desktop
 
-가상환경 활성화가 안 된다면 아래처럼 직접 실행할 수 있습니다.
+- 지출 내역과 분석 대시보드를 동시에 확인
+- 넓은 화면에서 지출 생성·수정 Drawer와 기존 목록을 함께 확인
+- 검색 / 필터 / 분석 결과를 한 화면에서 탐색
 
-```powershell
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe manage.py migrate
-.venv\Scripts\python.exe manage.py runserver
-```
+### Mobile
 
-기존 0002 migration의 동작을 유지했기 때문에 **새 DB를 만들면 2026년 8월의 예시 지출 3건이 생성됩니다.** 실제 가계부로 사용하려면 해당 예시 3건을 화면에서 삭제하세요. 기존 DB에 이미 0002가 적용돼 있다면 다시 생성되지 않습니다.
+하단 App Bar를 기준으로 주요 기능을 분리했습니다.
 
-## 기능과 계산 기준
+- **가계부**: 검색·필터와 지출 목록 중심
+- **+ 버튼**: 새 지출 기록
+- **분석**: 요약 정보와 분석 대시보드 중심
 
-| 기능 | 동작 |
+모바일에서도 검색·필터 조건은 분석 화면과 자연스럽게 연결됩니다.
+
+---
+
+## CSV 내보내기
+
+현재 적용된 검색 / 카테고리 / 기간 조건을 그대로 반영하여 지출 데이터를 CSV 파일로 내보낼 수 있습니다.
+
+내보내는 항목:
+
+- ID
+- 날짜
+- 카테고리
+- 내용
+- 금액
+
+스프레드시트에서 수식으로 해석될 수 있는 문자열은 안전하게 처리한 뒤 저장합니다.
+
+---
+
+## 디자인 시스템
+
+| 항목 | 내용 |
 | --- | --- |
-| 홈 요약 | 한국 시간 기준 이번 달 1일부터 오늘까지 쓴 돈, 오늘 쓴 돈 |
-| 지난달 비교 | 지난달 1일부터 같은 일자까지 비교. 지난달이 짧으면 그 달의 말일까지 |
-| 월 예산 | 월별 예산 저장·수정, 남은 금액, 예산 초과 표시 |
-| 하루 사용 가능 금액 | 남은 예산 ÷ 오늘을 포함한 월말까지 일수. 초과 시 0원 |
-| 지출 기록 | 날짜·카테고리·내용·금액 입력, 수정, 확인 후 삭제 |
-| 입력 검증 | 오늘까지의 실제 지출만 입력, 금액은 1~2,147,483,647원의 정수, 내용 필수 |
-| 검색 | 내용 또는 카테고리명 검색. 기간·카테고리 필터와 동시에 적용 |
-| 필터 | 카테고리 복수 선택, 이번 달·최근 3/6개월·전체, 직접 기간 선택 |
-| 통계 | 카테고리 구성, 기간별 추이, 단일 카테고리 분석, 두 카테고리 비교 |
-| 목록 | 최신 날짜 우선, 30건씩 페이지 이동 |
-| CSV | 현재 조건에 맞는 **전체 페이지** 내역을 UTF-8 BOM으로 다운로드. Excel에서 한글 표시 가능 |
-| 사용자 카테고리 | 새로 만들기, 중복·길이 검사. 마지막 지출을 삭제해도 카테고리 유지 |
-| 모바일 | 한 열 카드, 하단 메뉴, 전체 너비 기록 패널, 터치 영역과 안전 여백 |
+| 서비스명 | **씀 / SSEUM** |
+| 핵심 문구 | 기록이 습관이 되는, 나의 지출 관리 |
+| Brand Color | `#FFE860` |
+| Typography | **SUIT** |
+| UI 방향 | Modern · Simple · Responsive |
+| 주요 구성 | Cool grayscale + 카테고리별 컬러 variation |
 
-홈의 이번 달 요약은 아래 검색 필터와 독립적입니다. 검색 결과의 통계는 필터에 맞는 전체 기록 기준이며 페이지를 넘겨도 합계가 바뀌지 않습니다.
-월 예산은 지출 한도 계획이며 수입이나 계좌 잔액을 의미하지 않습니다.
-로그인·수입/이체·반복 결제 자동 생성·은행 연동은 포함하지 않았습니다.
+브랜드 옐로우는 주요 CTA와 강조 요소에 사용하고, 카테고리 데이터는 서로 구분하기 쉬운 색상 variation을 사용합니다.
 
-## 파일 구조
+---
+
+## 기술 스택
+
+### Backend
+
+- Python
+- Django `5.2+`
+- Django ORM
+- SQLite
+
+### Frontend
+
+- Django Template
+- HTML5
+- CSS3
+- Vanilla JavaScript
+- AJAX / Fetch API
+
+### UI
+
+- SUIT Font
+- SVG / PNG Brand Assets
+- Custom Date Picker
+- Responsive Layout
+- CSS 기반 Donut / Bar Chart UI
+
+추가적인 프론트엔드 프레임워크 없이 Django Template과 Vanilla JavaScript를 중심으로 구현했습니다.
+
+---
+
+## 데이터 구조
+
+### Category
+
+카테고리 기본 정보와 화면 표시용 색상을 관리합니다.
 
 ```text
-config/settings.py                # SQLite / PostgreSQL 설정
-expenses/models.py                # Category, CategoryKeyword, Expense, MonthlyBudget
-expenses/forms.py                 # 지출·예산 입력 검증
-expenses/views.py                 # CRUD, 조회 조건, 홈 집계, 예산, CSV
-expenses/services/statistics.py   # 재사용 가능한 통계 계산
-expenses/templates/expenses/      # 공통 틀, 홈, 목록·차트, 기록·예산 폼
-expenses/static/expenses/css/sseum.9fbbef0cd3be.css  # 통합 스타일, 모바일 포함
-expenses/static/expenses/js/ledger.56b4577d5c13.js     # 목록·필터·기본 입력·대화상자
-expenses/static/expenses/js/charts.17c471405918.js  # 차트 표현
-expenses/static/expenses/js/drawer.4d722f8d7531.js # 기록 패널
-expenses/migrations/              # DB 변경 이력 — 기존 번호 유지
-expenses/tests.py                 # 서버 회귀 테스트
+Category
+├─ name
+├─ color_key
+├─ is_default
+└─ created_at
 ```
 
-CSS/JS 파일명에 내용 해시를 넣어 이전 캐시와 구분합니다. 별도 프런트엔드 빌드나 npm 설치 없이 실행됩니다.
+### CategoryKeyword
 
-CSS 3개를 1개로 통합하고 사용하지 않는 이전 hero 스타일을 제거했습니다. JavaScript는 역할이 다른 목록·차트·입력 패널로 유지했습니다. 템플릿 조각도 서버 갱신에 사용하므로 무조건 한 파일로 합치지 않았습니다. pandas는 사용하지 않습니다.
+카테고리 검색 및 추천에 사용하는 키워드를 관리합니다.
 
-## PostgreSQL로 연결하기
+```text
+CategoryKeyword
+├─ category
+└─ keyword
+```
 
-현재도 SQLite라는 **SQL 데이터베이스**에 저장합니다. PostgreSQL 전환은 Django ORM 모델을 유지한 채 연결 설정을 바꾸는 방식입니다.
-먼저 PostgreSQL에 본인 소유의 빈 데이터베이스와 사용자를 준비한 뒤 같은 PowerShell 터미널에서 실행하세요.
+### Expense
+
+사용자가 기록한 개별 지출입니다.
+
+```text
+Expense
+├─ date
+├─ category
+├─ description
+├─ amount
+└─ created_at
+```
+
+### MonthlyBudget
+
+월별 예산을 관리합니다.
+
+```text
+MonthlyBudget
+├─ month
+├─ amount
+└─ updated_at
+```
+
+---
+
+## 프로젝트 구조
+
+```text
+Personal-Expense-Tracker/
+├─ config/
+│  ├─ settings.py
+│  ├─ urls.py
+│  ├─ asgi.py
+│  └─ wsgi.py
+│
+├─ expenses/
+│  ├─ management/
+│  │  └─ commands/
+│  │     └─ seed_demo_expenses.py
+│  │
+│  ├─ migrations/
+│  ├─ services/
+│  │  └─ statistics.py
+│  │
+│  ├─ static/expenses/
+│  │  ├─ css/
+│  │  │  └─ base.css
+│  │  ├─ images/
+│  │  └─ js/
+│  │     ├─ charts.js
+│  │     ├─ drawer.js
+│  │     └─ ledger.js
+│  │
+│  ├─ templates/expenses/
+│  │  ├─ base.html
+│  │  ├─ index.html
+│  │  ├─ _home.html
+│  │  ├─ _results.html
+│  │  ├─ _category_donut.html
+│  │  ├─ expense_form.html
+│  │  ├─ budget_form.html
+│  │  └─ _budget_form.html
+│  │
+│  ├─ admin.py
+│  ├─ apps.py
+│  ├─ forms.py
+│  ├─ models.py
+│  ├─ tests.py
+│  ├─ urls.py
+│  └─ views.py
+│
+├─ db.sqlite3
+├─ manage.py
+├─ requirements.txt
+└─ README.md
+```
+
+### 주요 파일 역할
+
+| 파일 | 역할 |
+| --- | --- |
+| `models.py` | 지출, 카테고리, 예산 데이터 모델 |
+| `forms.py` | 지출·예산 입력 검증 |
+| `views.py` | CRUD, 검색, 필터, 페이지네이션, 월 요약, 예산 처리 |
+| `services/statistics.py` | 분석용 통계 데이터 계산 |
+| `ledger.js` | 검색·필터·기간 선택·모바일 화면 동작 |
+| `charts.js` | 도넛/막대 차트 렌더링과 tooltip |
+| `drawer.js` | 지출 생성·수정 Drawer와 입력 UI |
+| `base.css` | 전체 디자인 시스템과 반응형 UI |
+
+---
+
+## 실행 방법
+
+### 1. 프로젝트 폴더로 이동
 
 ```powershell
-python -m pip install -r requirements-postgres.txt
-$env:DB_ENGINE = "postgresql"
-$env:POSTGRES_DB = "personal_expense_tracker"
-$env:POSTGRES_USER = "본인_DB_사용자"
-$env:POSTGRES_PASSWORD = "본인_DB_비밀번호"
-$env:POSTGRES_HOST = "127.0.0.1"
-$env:POSTGRES_PORT = "5432"
+cd C:\dev\Personal-Expense-Tracker
+```
+
+### 2. 가상환경 생성
+
+이미 `.venv`가 있다면 이 단계는 생략할 수 있습니다.
+
+```powershell
+python -m venv .venv
+```
+
+### 3. 가상환경 활성화
+
+Windows PowerShell 기준:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+활성화되면 터미널 앞에 다음과 같이 표시됩니다.
+
+```text
+(.venv) PS C:\dev\Personal-Expense-Tracker>
+```
+
+### 4. 패키지 설치
+
+```powershell
+pip install -r requirements.txt
+```
+
+### 5. 데이터베이스 적용
+
+```powershell
 python manage.py migrate
+```
+
+### 6. 개발 서버 실행
+
+```powershell
 python manage.py runserver
 ```
 
-환경변수는 현재 터미널에만 적용됩니다. `.env`를 자동으로 읽지는 않습니다. 비밀번호를 코드나 Git에 넣지 마세요.
-SQLite로 돌아가려면 `Remove-Item Env:DB_ENGINE` 후 서버를 다시 실행하세요.
+브라우저에서 아래 주소로 접속합니다.
 
-**연결만 변경하면 기존 SQLite 기록은 자동으로 옮겨지지 않습니다.** 데이터 이전은 별도 작업입니다. 이전할 때는 다음 순서로 진행합니다.
-
-1. 서버를 중지하고 SQLite 파일을 백업합니다.
-2. SQLite 설정 상태에서 `python manage.py dumpdata expenses --indent 2 --output expenses-backup.json`으로 카테고리·키워드·지출·예산을 내보냅니다.
-3. 비어 있는 PostgreSQL DB에 연결하고 migration을 적용합니다. 기존 데이터가 있는 PostgreSQL DB에 그대로 합치면 ID 충돌이 날 수 있습니다.
-4. 새 DB의 초기 예시/분류 데이터와 충돌 여부를 확인한 뒤 이전 계획에 따라 정리하고 JSON을 가져옵니다. 이 단계는 실제 DB를 연결할 때 함께 진행하는 것을 권장합니다.
-5. 지출 건수·총액·카테고리 연결·월 예산을 원본과 비교하고, 새 지출의 ID 발급도 확인합니다.
-
-이번 작업에서는 PostgreSQL 인스턴스에 실제 연결하지 않았습니다. 현재 단일 사용자의 모든 기록이 같은 DB를 공유하므로, 외부 공개 서비스로 배포하기 전에는 사용자별 데이터 분리와 접근 제어가 필요합니다.
-
-## 검증
-
-```powershell
-python manage.py check
-python manage.py test expenses
-python manage.py makemigrations --check --dry-run
+```text
+http://127.0.0.1:8000/
 ```
 
-Django 5.2.17 / SQLite에서 17개 테스트 통과:
-CRUD, 사용자 카테고리 보존, 잘못된 입력, 날짜 필터 오류, 검색 조합, CSV 범위/문자열 처리,
-페이지별 통계 일관성, 월 예산 수정/초과/기간 경계, AJAX 홈 갱신, CSRF, 미분류 통계, 예시 생성 보호.
-
-JavaScript는 별도 DOM 실행 환경에서 검색·필터·입력값 동기화·패널 열기 등 20개 검증 항목을 통과했고, CSS 문법 파싱과 주요 스타일 계산 4개 항목도 통과했습니다. 페이지에서 참조하는 CSS/JS의 서버 응답과 파일 내용 해시도 확인했습니다. 이 검증은 실제 화면 배치나 터치 검증을 대신하지 않습니다.
-
-브라우저 환경에서 로컬 URL과 파일 미리보기가 차단되어 실제 브라우저 화면/터치 동작을 끝까지 확인하지는 못했습니다.
-모바일 반응형 스타일은 적용했고, 아래 항목은 본인 브라우저에서 최종 확인해 주세요.
-
-- 데스크톱 / 390px / 320px 폭에서 홈과 기록 패널 확인
-- 지출 기록 → 수정 → 필터 검색 → CSV 다운로드
-- 예산 입력 후 홈의 남은 금액 확인
-- 새 카테고리 생성, 달력 선택, 모바일 하단 메뉴, 취소 확인창
+---
 
 ## 예시 데이터 생성
 
-실제 기록이 없는 테스트 DB에서 사용하는 명령입니다.
+대시보드와 필터 기능을 빠르게 확인하려면 포함된 management command를 사용할 수 있습니다.
+
+기존 데이터를 예시 데이터로 교체:
 
 ```powershell
-python manage.py seed_demo_expenses
+python manage.py seed_demo_expenses --replace
 ```
 
-기존 지출이 있으면 기본 실행은 중단합니다. 기존 기록을 유지하며 추가하려면 `--append`, 기존 지출을 지우고 교체하려면 `--replace`를 명시해야 합니다. 실제 가계부에는 `--replace`를 사용하지 마세요.
+기존 데이터를 유지하면서 추가:
+
+```powershell
+python manage.py seed_demo_expenses --append
+```
+
+별도의 옵션 없이 기존 지출 데이터가 존재하면 실수로 데이터를 지우지 않도록 명령 실행을 중단합니다.
+
+---
+
+## 테스트
+
+Django 테스트 실행:
+
+```powershell
+python manage.py test
+```
+
+현재 테스트에서는 다음과 같은 주요 동작을 확인합니다.
+
+- 지출 등록 / 수정 / 삭제
+- 잘못된 금액·날짜·카테고리 입력 검증
+- 미래 날짜 입력 방지
+- 검색 + 카테고리 + 기간 복합 필터
+- 페이지네이션 상태에서도 전체 통계 유지
+- CSV 내보내기
+- 월 예산 저장 및 초과 계산
+- 월 이동 및 월별 요약
+- 사용자 정의 카테고리 생성
+- CSRF 보호
+- 빈 데이터 및 비교 대시보드 통계
+- AJAX 결과 갱신
+
+---
+
+## 서비스 사용 흐름
+
+```text
+지출 기록
+   ↓
+검색 / 카테고리 / 기간으로 필요한 기록 확인
+   ↓
+월별 소비와 예산 확인
+   ↓
+카테고리 구성 및 지출 추이 분석
+   ↓
+필요한 경우 두 카테고리를 직접 비교
+```
+
+씀은 기록 자체를 복잡하게 만들기보다, **가볍게 기록하고 필요할 때 소비 흐름을 확인하는 경험**에 초점을 두고 있습니다.

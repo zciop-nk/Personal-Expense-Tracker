@@ -454,6 +454,7 @@ main.js를 직접 덮어쓰지 않고,
             if (topName) {
                 topName.textContent =
                     largest.name;
+                topName.title = largest.name;
             }
 
             if (topPercent) {
@@ -496,6 +497,16 @@ main.js를 직접 덮어쓰지 않고,
                     </div>
                 `;
 
+                const nameElement =
+                    row.querySelector(
+                        ".description-donut-name"
+                    );
+
+                if (nameElement) {
+                    nameElement.title =
+                        item.name;
+                }
+
                 legend.appendChild(
                     row
                 );
@@ -508,6 +519,99 @@ main.js를 직접 덮어쓰지 않고,
     -------------------------------------------------- */
 
     function applyTrendOverflow() {
+        const visibleCount = 5;
+
+        function configureChart({
+            chart,
+            bars,
+            scale,
+            itemCount,
+            itemSelector,
+            leftInset,
+            gap,
+            minimumItemWidth,
+        }) {
+            if (!bars || !itemCount) return;
+
+            const shouldScroll =
+                itemCount > visibleCount;
+
+            chart.classList.toggle(
+                "is-trend-scrollable",
+                shouldScroll
+            );
+
+            if (!shouldScroll) {
+                bars.style.minWidth = "100%";
+                bars.style.removeProperty(
+                    "--trend-item-width"
+                );
+
+                chart
+                    .querySelectorAll(itemSelector)
+                    .forEach((item) => {
+                        item.style.removeProperty(
+                            "--trend-item-width"
+                        );
+                    });
+
+                if (scale) {
+                    scale.style.width = "";
+                    scale.style.right = "";
+                }
+
+                return;
+            }
+
+            /*
+             * 현재 카드에서 정확히 5개가 한 번에 보이는 폭을 기준으로
+             * 각 item의 고정 폭을 계산합니다. 6번째부터 가로 스크롤입니다.
+             */
+            const viewportWidth =
+                Math.max(
+                    chart.clientWidth || 0,
+                    280
+                );
+
+            const plotWidth =
+                Math.max(
+                    viewportWidth - leftInset,
+                    220
+                );
+
+            const itemWidth =
+                Math.max(
+                    minimumItemWidth,
+                    (
+                        plotWidth -
+                        gap *
+                            (visibleCount - 1)
+                    ) /
+                        visibleCount
+                );
+
+            const fullWidth =
+                Math.ceil(
+                    leftInset +
+                    itemWidth * itemCount +
+                    gap * (itemCount - 1)
+                );
+
+            bars.style.minWidth =
+                `${fullWidth}px`;
+
+            bars.style.setProperty(
+                "--trend-item-width",
+                `${itemWidth}px`
+            );
+
+            if (scale) {
+                scale.style.width =
+                    `${fullWidth}px`;
+                scale.style.right = "auto";
+            }
+        }
+
         document
             .querySelectorAll(
                 "[data-adaptive-trend]"
@@ -529,60 +633,18 @@ main.js를 직접 덮어쓰지 않고,
                     ),
                 ];
 
-                if (!bars) return;
-
-                const isDaily =
-                    chart.dataset
-                        .granularity ===
-                    "day";
-
-                /*
-                 * 8개까지는 현재 카드 안에서 충분히 읽을 수 있습니다.
-                 * 9개부터만 스크롤을 켭니다.
-                 */
-                const shouldScroll =
-                    isDaily &&
-                    items.length > 8;
-
-                chart.classList.toggle(
-                    "is-trend-scrollable",
-                    shouldScroll
-                );
-
-                if (!shouldScroll) {
-                    bars.style.minWidth =
-                        "100%";
-
-                    if (scale) {
-                        scale.style.width =
-                            "";
-                        scale.style.right =
-                            "";
-                    }
-
-                    return;
-                }
-
-                const width =
-                    Math.max(
-                        520,
-                        42 +
-                            items.length *
-                                42
-                    );
-
-                bars.style.minWidth =
-                    `${width}px`;
-
-                if (scale) {
-                    scale.style.width =
-                        `${width}px`;
-
-                    scale.style.right =
-                        "auto";
-                }
+                configureChart({
+                    chart,
+                    bars,
+                    scale,
+                    itemCount: items.length,
+                    itemSelector:
+                        ".adaptive-trend-item",
+                    leftInset: 42,
+                    gap: 7,
+                    minimumItemWidth: 44,
+                });
             });
-
 
         document
             .querySelectorAll(
@@ -605,53 +667,217 @@ main.js를 직접 덮어쓰지 않고,
                     ),
                 ];
 
-                if (!bars) return;
+                configureChart({
+                    chart,
+                    bars,
+                    scale,
+                    itemCount: groups.length,
+                    itemSelector:
+                        ".comparison-trend-group",
+                    leftInset: 42,
+                    gap: 8,
+                    minimumItemWidth: 52,
+                });
+            });
+    }
 
-                const isDaily =
-                    chart.dataset
-                        .granularity ===
-                    "day";
 
-                const shouldScroll =
-                    isDaily &&
-                    groups.length > 7;
+    function formatTooltipAmount(amount) {
+        return `${Number(amount || 0).toLocaleString("ko-KR")}원`;
+    }
 
-                chart.classList.toggle(
-                    "is-trend-scrollable",
-                    shouldScroll
-                );
 
-                if (!shouldScroll) {
-                    bars.style.minWidth =
-                        "100%";
+    function ensureTrendTooltip(chart) {
+        let tooltip =
+            chart.querySelector(
+                ".trend-detail-tooltip"
+            );
 
-                    if (scale) {
-                        scale.style.width =
-                            "";
-                        scale.style.right =
-                            "";
-                    }
+        if (tooltip) return tooltip;
 
-                    return;
+        tooltip =
+            document.createElement("div");
+
+        tooltip.className =
+            "trend-detail-tooltip";
+
+        tooltip.hidden = true;
+        tooltip.setAttribute("role", "status");
+        tooltip.setAttribute(
+            "aria-live",
+            "polite"
+        );
+
+        chart.appendChild(tooltip);
+
+        return tooltip;
+    }
+
+
+    function bindTrendTooltips() {
+        document
+            .querySelectorAll(
+                "[data-adaptive-trend], [data-comparison-trend]"
+            )
+            .forEach((chart) => {
+                const tooltip =
+                    ensureTrendTooltip(chart);
+
+                const bars = [
+                    ...chart.querySelectorAll(
+                        ".adaptive-trend-bar, .comparison-trend-bar"
+                    ),
+                ];
+
+                function hideTooltip() {
+                    tooltip.hidden = true;
+                    chart.classList.remove(
+                        "has-active-tooltip"
+                    );
+                    bars.forEach((bar) =>
+                        bar.classList.remove(
+                            "is-tooltip-active"
+                        )
+                    );
                 }
 
-                const width =
-                    Math.max(
-                        520,
-                        42 +
-                            groups.length *
-                                46
+                function showTooltip(bar) {
+                    const period =
+                        bar.dataset.periodLabel ||
+                        "";
+
+                    const category =
+                        bar.dataset.categoryLabel ||
+                        "";
+
+                    const amount =
+                        Number(
+                            bar.dataset.exactAmount ||
+                                0
+                        );
+
+                    const heading = category
+                        ? `${period} · ${category}`
+                        : period;
+
+                    tooltip.innerHTML = `
+                        <strong>${escapeHtml(heading)}</strong>
+                        <span>${formatTooltipAmount(amount)}</span>
+                    `;
+
+                    tooltip.hidden = false;
+                    chart.classList.add(
+                        "has-active-tooltip"
                     );
 
-                bars.style.minWidth =
-                    `${width}px`;
+                    bars.forEach((item) =>
+                        item.classList.toggle(
+                            "is-tooltip-active",
+                            item === bar
+                        )
+                    );
 
-                if (scale) {
-                    scale.style.width =
-                        `${width}px`;
+                    const chartRect =
+                        chart.getBoundingClientRect();
+                    const barRect =
+                        bar.getBoundingClientRect();
 
-                    scale.style.right =
-                        "auto";
+                    const left =
+                        barRect.left -
+                        chartRect.left +
+                        chart.scrollLeft +
+                        barRect.width / 2;
+
+                    const top =
+                        barRect.top -
+                        chartRect.top +
+                        chart.scrollTop -
+                        8;
+
+                    tooltip.style.left =
+                        `${left}px`;
+                    tooltip.style.top =
+                        `${top}px`;
+                }
+
+                bars.forEach((bar) => {
+                    if (
+                        bar.dataset
+                            .trendTooltipBound ===
+                        "true"
+                    ) {
+                        return;
+                    }
+
+                    bar.dataset.trendTooltipBound =
+                        "true";
+
+                    bar.addEventListener(
+                        "mouseenter",
+                        () => showTooltip(bar)
+                    );
+
+                    bar.addEventListener(
+                        "mouseleave",
+                        () => hideTooltip()
+                    );
+
+                    bar.addEventListener(
+                        "focus",
+                        () => showTooltip(bar)
+                    );
+
+                    bar.addEventListener(
+                        "blur",
+                        () => hideTooltip()
+                    );
+
+                    bar.addEventListener(
+                        "pointerup",
+                        (event) => {
+                            if (
+                                event.pointerType ===
+                                "mouse"
+                            ) {
+                                return;
+                            }
+
+                            if (
+                                bar.classList.contains(
+                                    "is-tooltip-active"
+                                )
+                            ) {
+                                hideTooltip();
+                            } else {
+                                showTooltip(bar);
+                            }
+                        }
+                    );
+                });
+
+                if (
+                    chart.dataset
+                        .trendOutsideBound !==
+                    "true"
+                ) {
+                    chart.dataset
+                        .trendOutsideBound =
+                        "true";
+
+                    chart.addEventListener(
+                        "pointerdown",
+                        (event) => {
+                            if (
+                                event.target.closest(
+                                    ".adaptive-trend-bar, .comparison-trend-bar"
+                                )
+                            ) {
+                                return;
+                            }
+
+                            hideTooltip();
+                        }
+                    );
                 }
             });
     }
@@ -666,6 +892,8 @@ main.js를 직접 덮어쓰지 않고,
             function () {
                 originalRenderAdaptiveTrendCharts();
                 applyTrendOverflow();
+                bindTrendTooltips();
+                polishAdaptiveCharts();
             };
     }
 
@@ -678,7 +906,148 @@ main.js를 직접 덮어쓰지 않고,
             function () {
                 originalRenderComparisonDashboard();
                 applyTrendOverflow();
+                bindTrendTooltips();
+                polishComparisonCharts();
             };
+    }
+
+
+
+    /* --------------------------------------------------
+       Shared bar animation / comparison zero state
+    -------------------------------------------------- */
+
+    function animateRenderedBars(root, selector) {
+        if (!root) return;
+
+        const reduceMotion =
+            window.matchMedia?.(
+                "(prefers-reduced-motion: reduce)"
+            )?.matches;
+
+        root.querySelectorAll(selector).forEach((bar) => {
+            /*
+            * 처음 렌더링된 실제 높이를 data에 보존합니다.
+            * 애니메이션이 다시 호출되어도 0%를 최종값으로
+            * 잘못 읽지 않게 합니다.
+            */
+            const finalHeight =
+                bar.dataset.targetHeight ||
+                bar.style.height ||
+                "0%";
+
+            bar.dataset.targetHeight = finalHeight;
+
+            if (
+                reduceMotion ||
+                finalHeight === "0%" ||
+                finalHeight === "0px"
+            ) {
+                bar.style.height = finalHeight;
+                return;
+            }
+
+            bar.style.height = "0%";
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    bar.style.height = finalHeight;
+                });
+            });
+        });
+    }
+
+    function polishAdaptiveCharts() {
+        document
+            .querySelectorAll("[data-adaptive-trend]")
+            .forEach((chart) => {
+                animateRenderedBars(
+                    chart,
+                    ".adaptive-trend-bar"
+                );
+            });
+    }
+
+
+    function polishComparisonCharts() {
+        document
+            .querySelectorAll("[data-comparison-trend]")
+            .forEach((chart) => {
+                /*
+                 * A/B/C 카드와 동일하게 unit badge에는
+                 * "단위:" 접두사를 반복하지 않습니다.
+                 */
+                const card =
+                    chart.closest(".dashboard-card");
+
+                const unitBadge =
+                    card?.querySelector(
+                        "[data-comparison-unit]"
+                    );
+
+                if (unitBadge) {
+                    unitBadge.textContent =
+                        unitBadge.textContent
+                            .replace(/^단위:\s*/, "")
+                            .trim();
+                }
+
+                chart
+                    .querySelectorAll(
+                        ".comparison-trend-bar"
+                    )
+                    .forEach((bar) => {
+                        const height =
+                            parseFloat(
+                                bar.style.height || "0"
+                            );
+
+                        const isZero =
+                            !Number.isFinite(height) ||
+                            height <= 0;
+
+                        bar.classList.toggle(
+                            "is-zero",
+                            isZero
+                        );
+
+                        if (isZero) {
+                            const categoryColor =
+                                bar.style.backgroundColor;
+
+                            /*
+                             * 0원도 해당 카테고리 색을 유지하되
+                             * 짧은 baseline marker로만 표시합니다.
+                             */
+                            if (categoryColor) {
+                                bar.style.backgroundColor =
+                                    categoryColor;
+                            }
+
+                            const originalTitle =
+                                bar.title || "0원";
+
+                            if (
+                                !originalTitle.includes(
+                                    "지출 없음"
+                                )
+                            ) {
+                                bar.title =
+                                    `${originalTitle} · 이 기간 지출 없음`;
+                            }
+
+                            bar.setAttribute(
+                                "aria-label",
+                                bar.title
+                            );
+                        }
+                    });
+
+                animateRenderedBars(
+                    chart,
+                    ".comparison-trend-bar"
+                );
+            });
     }
 
 
@@ -690,9 +1059,25 @@ main.js를 직접 덮어쓰지 않고,
     document.addEventListener(
         "DOMContentLoaded",
         () => {
-            requestAnimationFrame(
-                applyTrendOverflow
-            );
+            requestAnimationFrame(() => {
+                applyTrendOverflow();
+                bindTrendTooltips();
+            });
         }
     );
+
+
+    let trendResizeTimer = null;
+
+    window.addEventListener("resize", () => {
+        window.clearTimeout(trendResizeTimer);
+
+        trendResizeTimer = window.setTimeout(
+            () => {
+                applyTrendOverflow();
+            },
+            120
+        );
+    });
+
 })();

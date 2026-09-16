@@ -3,10 +3,14 @@ function escapeHtml(value) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    if (ensureMobileListPageSize()) return;
+
+    initMobileTabs();
     initListPage();
     initFormCalendar();
     initCategoryCombobox();
     initFlashMessages();
+    initHomeMonthNavigation();
     const display = document.querySelector("#descriptionDisplay");
     const hidden = document.querySelector("#id_description");
     if (display && hidden) {
@@ -588,6 +592,41 @@ function formatTrendXAxis(period, granularity) {
     return `${Number(month)}월`;
 }
 
+
+/*
+ * 차트 하단 숫자는 카드 폭을 밀지 않도록 최대 3개의 유효 숫자만 사용합니다.
+ * - 100 이상: 정수로 반올림 (예: 204.8 → 205)
+ * - 10~99: 소수 첫째 자리까지 (예: 23.44 → 23.4)
+ * - 10 미만: 소수 첫째 자리까지 (예: 2.35 → 2.4)
+ * - .0은 제거합니다.
+ */
+function formatCompactTrendValue(value) {
+    if (!Number.isFinite(value)) return "0";
+
+    let rounded;
+
+    if (Math.abs(value) >= 100) {
+        rounded = Math.round(value);
+        return String(rounded);
+    }
+
+    rounded = Math.round(value * 10) / 10;
+
+    return Number.isInteger(rounded)
+        ? String(rounded)
+        : rounded.toFixed(1);
+}
+
+function formatTrendDetailPeriod(period, granularity) {
+    if (granularity === "day") {
+        const [year, month, day] = period.split("-");
+        return `${year}년 ${Number(month)}월 ${Number(day)}일`;
+    }
+
+    const [year, month] = period.split("-");
+    return `${year}년 ${Number(month)}월`;
+}
+
 function renderTrendScale(scale, top, unit, classPrefix) {
     if (!scale) return;
     scale.innerHTML = "";
@@ -638,10 +677,27 @@ function renderAdaptiveTrendCharts() {
             const value = item.querySelector(".adaptive-trend-value");
             const bar = item.querySelector(".adaptive-trend-bar");
             if (label) label.textContent = formatTrendXAxis(period, granularity);
-            if (value) value.textContent = (amount / unit.divisor).toFixed(unit.decimals);
+
+            const scaledAmount = amount / unit.divisor;
+
+            if (value) {
+                value.textContent = formatCompactTrendValue(scaledAmount);
+                value.title = `${amount.toLocaleString("ko-KR")}원`;
+            }
+
             if (bar) {
-                bar.style.height = `${top ? ((amount / unit.divisor) / top) * 100 : 0}%`;
-                if (!bar.classList.contains("adaptive-trend-bar-accent")) bar.style.backgroundColor = solid;
+                bar.style.height = `${top ? (scaledAmount / top) * 100 : 0}%`;
+                bar.dataset.periodLabel = formatTrendDetailPeriod(period, granularity);
+                bar.dataset.exactAmount = String(amount);
+                bar.setAttribute(
+                    "aria-label",
+                    `${formatTrendDetailPeriod(period, granularity)} ${amount.toLocaleString("ko-KR")}원`
+                );
+                bar.tabIndex = 0;
+
+                if (!bar.classList.contains("adaptive-trend-bar-accent")) {
+                    bar.style.backgroundColor = solid;
+                }
             }
         });
     });
@@ -699,25 +755,113 @@ function renderComparisonDashboard() {
             periods.forEach((period) => {
                 const group = document.createElement("div");
                 group.className = "comparison-trend-group";
+
                 const barGroup = document.createElement("div");
                 barGroup.className = "comparison-trend-bar-group";
 
-                categories.forEach((category) => {
-                    const point = points.find((p) => p.period === period && p.name === category.name);
-                    const amount = point?.amount || 0;
-                    const [, , solid] = getCategoryPalette(category.colorKey);
-                    const bar = document.createElement("span");
-                    bar.className = "comparison-trend-bar";
-                    bar.style.height = `${top ? ((amount / unit.divisor) / top) * 100 : 0}%`;
+                /*
+                * 해당 월의 카테고리별 실제 금액을 먼저 계산
+                */
+                const periodData = categories.map((category) => {
+                    const point = points.find(
+                        (p) =>
+                            p.period === period &&
+                            p.name === category.name
+                    );
+
+                    return {
+                        ...category,
+                        amount: point?.amount || 0,
+                    };
+                });
+
+                /*
+                * 0원은 시각적 막대를 만들지 않습니다.
+                */
+                const activeData = periodData.filter(
+                    (item) => item.amount > 0
+                );
+
+                activeData.forEach((item) => {
+                    const [, , solid] =
+                        getCategoryPalette(item.colorKey);
+
+                    const bar =
+                        document.createElement("span");
+
+                    bar.className =
+                        "comparison-trend-bar";
+
+                    /*
+                    * 한 카테고리만 값이 있을 때는
+                    * 막대를 조금 더 두껍게 표시합니다.
+                    */
+                    if (activeData.length === 1) {
+                        bar.classList.add("is-solo");
+                    }
+
+                    const rawPercent =
+                        top
+                            ? (
+                                (item.amount / unit.divisor) /
+                                top
+                            ) * 100
+                            : 0;
+
+                    /*
+                     * 실제 값이 있지만 최대값 대비 너무 작으면
+                     * 선처럼 사라지지 않도록 최소 시각 높이만 보장합니다.
+                     * 0원은 activeData에서 이미 제외되어 막대를 만들지 않습니다.
+                     */
+                    const visiblePercent =
+                        item.amount > 0
+                            ? Math.max(rawPercent, 2.8)
+                            : 0;
+
+                    bar.style.height =
+                        `${visiblePercent}%`;
+
+                    if (
+                        item.amount > 0 &&
+                        rawPercent < 2.8
+                    ) {
+                        bar.classList.add("is-tiny");
+                    }
+
                     bar.style.backgroundColor = solid;
-                    bar.title = `${category.name} ${amount.toLocaleString("ko-KR")}원`;
+
+                    const detailPeriod =
+                        formatTrendDetailPeriod(period, granularity);
+
+                    bar.title =
+                        `${detailPeriod} · ${item.name} ${item.amount.toLocaleString("ko-KR")}원`;
+
+                    bar.dataset.periodLabel = detailPeriod;
+                    bar.dataset.categoryLabel = item.name;
+                    bar.dataset.exactAmount = String(item.amount);
+                    bar.setAttribute("aria-label", bar.title);
+                    bar.tabIndex = 0;
+
                     barGroup.appendChild(bar);
                 });
 
-                const label = document.createElement("span");
-                label.className = "comparison-trend-label";
-                label.textContent = formatTrendXAxis(period, granularity);
-                group.append(barGroup, label);
+                const label =
+                    document.createElement("span");
+
+                label.className =
+                    "comparison-trend-label";
+
+                label.textContent =
+                    formatTrendXAxis(
+                        period,
+                        granularity
+                    );
+
+                group.append(
+                    barGroup,
+                    label
+                );
+
                 bars.appendChild(group);
             });
         }
@@ -766,6 +910,24 @@ function initListPage() {
         if (dateTo.value) params.set("date_to", dateTo.value);
         if (periodValue.value) params.set("period", periodValue.value);
         if (searchInput.value.trim()) params.set("q", searchInput.value.trim());
+
+        if (window.matchMedia("(max-width: 760px)").matches) {
+            params.set("page_size", "15");
+        }
+
+        const homeMonthNav =
+            document.querySelector("[data-home-month-nav]");
+
+        if (
+            homeMonthNav?.dataset.selectedMonth &&
+            homeMonthNav.dataset.selectedMonth !==
+                homeMonthNav.dataset.currentMonth
+        ) {
+            params.set(
+                "home_month",
+                homeMonthNav.dataset.selectedMonth
+            );
+        }
 
         return params;
     }
@@ -878,7 +1040,11 @@ function initListPage() {
             document.querySelector("#exportLink").href = `/expenses/export/?${params.toString()}`;
             document.querySelector("#filterStatus").hidden = true;
             document.querySelector("#resultsArea").setAttribute("aria-busy", "false");
-            history.replaceState(null, "", url);
+            history.replaceState(
+                null,
+                "",
+                `${url}${window.location.hash || ""}`
+            );
             decorateResults();
         } catch (error) {
             if (error.name !== "AbortError") {
@@ -1432,6 +1598,413 @@ document.addEventListener("keydown", event => {
     }
 });
 
+
+function initHomeMonthNavigation() {
+    const home = document.querySelector("#homeArea");
+    if (!home) return;
+
+    let activeRequest = null;
+
+    function parseMonth(value) {
+        const match = /^(\d{4})-(\d{2})$/.exec(value || "");
+        if (!match) return null;
+
+        return {
+            year: Number(match[1]),
+            month: Number(match[2]),
+        };
+    }
+
+    function toMonthKey(year, month) {
+        const index = year * 12 + (month - 1);
+        const normalizedYear = Math.floor(index / 12);
+        const normalizedMonth = ((index % 12) + 12) % 12 + 1;
+
+        return `${String(normalizedYear).padStart(4, "0")}-${String(normalizedMonth).padStart(2, "0")}`;
+    }
+
+    function shiftMonth(value, amount) {
+        const parsed = parseMonth(value);
+        if (!parsed) return value;
+
+        return toMonthKey(
+            parsed.year,
+            parsed.month + amount
+        );
+    }
+
+    function updateUrl(month, currentMonth) {
+        const url = new URL(window.location.href);
+
+        if (month === currentMonth) {
+            url.searchParams.delete("home_month");
+        } else {
+            url.searchParams.set("home_month", month);
+        }
+
+        history.replaceState(
+            null,
+            "",
+            `${url.pathname}${url.search}${url.hash}`
+        );
+    }
+
+    async function loadMonth(month) {
+        const nav =
+            document.querySelector("[data-home-month-nav]");
+
+        if (!nav) return;
+
+        const currentMonth =
+            nav.dataset.currentMonth || "";
+
+        const target =
+            month > currentMonth
+                ? currentMonth
+                : month;
+
+        if (!target) return;
+
+        if (activeRequest) {
+            activeRequest.abort();
+        }
+
+        activeRequest =
+            new AbortController();
+
+        home.classList.add("is-home-loading");
+
+        try {
+            const response = await fetch(
+                `/home/month/?month=${encodeURIComponent(target)}`,
+                {
+                    credentials: "same-origin",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    signal: activeRequest.signal,
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `home month ${response.status}`
+                );
+            }
+
+            const data =
+                await response.json();
+
+            if (!data.home_html) {
+                throw new Error(
+                    "missing home_html"
+                );
+            }
+
+            home.innerHTML =
+                data.home_html;
+
+            const nextNav =
+                document.querySelector(
+                    "[data-home-month-nav]"
+                );
+
+            updateUrl(
+                data.selected_month || target,
+                nextNav?.dataset.currentMonth ||
+                    currentMonth
+            );
+        } catch (error) {
+            if (
+                error.name !==
+                "AbortError"
+            ) {
+                console.error(error);
+            }
+        } finally {
+            home.classList.remove(
+                "is-home-loading"
+            );
+
+            activeRequest = null;
+        }
+    }
+
+    function renderPicker(nav) {
+        const grid =
+            nav.querySelector(
+                "[data-home-month-grid]"
+            );
+
+        const yearLabel =
+            nav.querySelector(
+                "[data-home-picker-year]"
+            );
+
+        if (!grid || !yearLabel) {
+            return;
+        }
+
+        const selected =
+            parseMonth(
+                nav.dataset.selectedMonth
+            );
+
+        const current =
+            parseMonth(
+                nav.dataset.currentMonth
+            );
+
+        const year =
+            Number(
+                grid.dataset.pickerYear
+            ) ||
+            selected?.year ||
+            current?.year ||
+            new Date().getFullYear();
+
+        grid.dataset.pickerYear =
+            String(year);
+
+        yearLabel.textContent =
+            `${year}년`;
+
+        grid.replaceChildren();
+
+        for (
+            let month = 1;
+            month <= 12;
+            month += 1
+        ) {
+            const value =
+                toMonthKey(year, month);
+
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+            button.type = "button";
+            button.className =
+                "home-month-option";
+            button.dataset.homeMonthValue =
+                value;
+            button.textContent =
+                `${month}월`;
+
+            if (
+                value ===
+                nav.dataset.selectedMonth
+            ) {
+                button.setAttribute(
+                    "aria-pressed",
+                    "true"
+                );
+            }
+
+            if (
+                current &&
+                value >
+                    nav.dataset.currentMonth
+            ) {
+                button.disabled = true;
+            }
+
+            grid.appendChild(button);
+        }
+
+        const nextYearButton =
+            nav.querySelector(
+                '[data-home-year-step="1"]'
+            );
+
+        if (
+            nextYearButton &&
+            current
+        ) {
+            nextYearButton.disabled =
+                year >= current.year;
+        }
+    }
+
+    document.addEventListener(
+        "click",
+        (event) => {
+            const currentNav =
+                document.querySelector(
+                    "[data-home-month-nav]"
+                );
+
+            if (!currentNav) return;
+
+            const picker =
+                currentNav.querySelector(
+                    "#homeMonthPicker"
+                );
+
+            const toggle =
+                currentNav.querySelector(
+                    "[data-home-month-toggle]"
+                );
+
+            const nav =
+                event.target.closest(
+                    "[data-home-month-nav]"
+                );
+
+            if (!nav) {
+                if (
+                    picker &&
+                    !picker.hidden
+                ) {
+                    picker.hidden = true;
+                    toggle?.setAttribute(
+                        "aria-expanded",
+                        "false"
+                    );
+                }
+                return;
+            }
+
+            const stepButton =
+                event.target.closest(
+                    "[data-home-month-step]"
+                );
+
+            if (stepButton) {
+                if (
+                    stepButton.disabled
+                ) {
+                    return;
+                }
+
+                loadMonth(
+                    shiftMonth(
+                        nav.dataset.selectedMonth,
+                        Number(
+                            stepButton.dataset
+                                .homeMonthStep
+                        )
+                    )
+                );
+                return;
+            }
+
+            const currentButton =
+                event.target.closest(
+                    "[data-home-current]"
+                );
+
+            if (currentButton) {
+                if (
+                    !currentButton.disabled
+                ) {
+                    loadMonth(
+                        nav.dataset.currentMonth
+                    );
+                }
+                return;
+            }
+
+            const monthToggle =
+                event.target.closest(
+                    "[data-home-month-toggle]"
+                );
+
+            if (monthToggle) {
+                const monthPicker =
+                    nav.querySelector(
+                        "#homeMonthPicker"
+                    );
+
+                monthPicker.hidden =
+                    !monthPicker.hidden;
+
+                monthToggle.setAttribute(
+                    "aria-expanded",
+                    String(
+                        !monthPicker.hidden
+                    )
+                );
+
+                if (
+                    !monthPicker.hidden
+                ) {
+                    const selected =
+                        parseMonth(
+                            nav.dataset
+                                .selectedMonth
+                        );
+
+                    const grid =
+                        nav.querySelector(
+                            "[data-home-month-grid]"
+                        );
+
+                    if (
+                        grid &&
+                        selected
+                    ) {
+                        grid.dataset.pickerYear =
+                            String(
+                                selected.year
+                            );
+                    }
+
+                    renderPicker(nav);
+                }
+
+                return;
+            }
+
+            const yearStep =
+                event.target.closest(
+                    "[data-home-year-step]"
+                );
+
+            if (yearStep) {
+                if (
+                    yearStep.disabled
+                ) {
+                    return;
+                }
+
+                const grid =
+                    nav.querySelector(
+                        "[data-home-month-grid]"
+                    );
+
+                grid.dataset.pickerYear =
+                    String(
+                        Number(
+                            grid.dataset
+                                .pickerYear
+                        ) +
+                        Number(
+                            yearStep.dataset
+                                .homeYearStep
+                        )
+                    );
+
+                renderPicker(nav);
+                return;
+            }
+
+            const monthOption =
+                event.target.closest(
+                    "[data-home-month-value]"
+                );
+
+            if (monthOption) {
+                loadMonth(
+                    monthOption.dataset
+                        .homeMonthValue
+                );
+            }
+        }
+    );
+}
+
 // The budget is a short task completed in place; /budget/ remains a direct-link fallback.
 document.addEventListener("DOMContentLoaded", () => {
     const dialog = document.querySelector("#budgetDialog");
@@ -1447,7 +2020,12 @@ document.addEventListener("DOMContentLoaded", () => {
         target.innerHTML = data.form_html;
         bindBudget(target.querySelector("[data-budget-form]"));
     }
-    function closeBudget() { ++requestNumber; dialog.close(); trigger?.focus(); }
+    function closeBudget() {
+        ++requestNumber;
+        document.body.classList.remove("budget-sheet-open");
+        dialog.close();
+        trigger?.focus();
+    }
     function bindBudget(form) {
         if (!form) return;
         const field = form.querySelector('[name="month"]');
@@ -1484,7 +2062,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data=await response.json();
                 if(!data.success){form.parentElement.innerHTML=data.form_html;bindBudget((dialog.open ? body : document).querySelector('[data-budget-form]'));return;}
                 const home=document.querySelector("#homeArea");
-                if(home){home.innerHTML=data.home_html;closeBudget();const notice=document.createElement("p");notice.className="expense-drawer-toast";notice.role="status";notice.textContent="월 예산을 저장했어요.";document.body.appendChild(notice);setTimeout(()=>notice.remove(),3000);}
+                if(home){
+                    home.innerHTML=data.home_html;
+
+                    const nav=home.querySelector("[data-home-month-nav]");
+                    if(nav&&data.selected_month){
+                        const url=new URL(window.location.href);
+                        if(data.selected_month===nav.dataset.currentMonth){
+                            url.searchParams.delete("home_month");
+                        }else{
+                            url.searchParams.set("home_month",data.selected_month);
+                        }
+                        history.replaceState(null,"",`${url.pathname}${url.search}${url.hash}`);
+                    }
+
+                    closeBudget();
+                    const notice=document.createElement("p");
+                    notice.className="expense-drawer-toast";
+                    notice.role="status";
+                    notice.textContent="월 예산을 저장했어요.";
+                    document.body.appendChild(notice);
+                    setTimeout(()=>notice.remove(),3000);
+                }
                 else window.location.assign("/");
             }catch(e){error.textContent=e.message;error.hidden=false;}
             finally{submit.disabled=false;submit.textContent="예산 저장";}
@@ -1492,12 +2091,415 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     document.addEventListener("click",async event=>{
         const link=event.target.closest("[data-budget-open]");
-        if(link){event.preventDefault();trigger=link;body.textContent="예산을 불러오는 중…";dialog.showModal();try{await loadBudget();}catch(e){body.textContent=e.message;}return;}
+        if(link){
+            event.preventDefault();
+            trigger=link;
+            body.textContent="예산을 불러오는 중…";
+            document.body.classList.add("budget-sheet-open");
+            dialog.showModal();
+            try{
+                await loadBudget(link.dataset.budgetMonth || "");
+            }catch(e){
+                body.textContent=e.message;
+            }
+            return;
+        }
         if(event.target.closest("[data-budget-close]")&&dialog.open){event.preventDefault();closeBudget();}
         const form=document.querySelector('[data-budget-form]');
         if(form&&!event.target.closest('.budget-month-field')){form.querySelector('#budgetMonthPicker').hidden=true;form.querySelector('[data-month-toggle]').setAttribute('aria-expanded','false');}
     });
     dialog.addEventListener("click",event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeBudget();}});
-    dialog.addEventListener("cancel",()=>{++requestNumber;});
+    dialog.addEventListener("cancel",()=>{++requestNumber;document.body.classList.remove("budget-sheet-open");});
     bindBudget(document.querySelector("[data-budget-form]"));
+});
+
+function formatKoreanMoneyUnit(amount) {
+    let value = Math.floor(Number(amount));
+
+    if (
+        !Number.isFinite(value) ||
+        value <= 0
+    ) {
+        return "";
+    }
+
+    const units = [
+        [100000000, "억"],
+        [10000, "만"],
+        [1000, "천"],
+        [100, "백"],
+        [10, "십"],
+    ];
+
+    const parts = [];
+
+    units.forEach(([unit, label]) => {
+        const count =
+            Math.floor(value / unit);
+
+        if (count <= 0) return;
+
+        /*
+         * 1천 → 천
+         * 1만 → 만
+         */
+        parts.push(
+            `${count === 1 ? "" : count}${label}`
+        );
+
+        value %= unit;
+    });
+
+    if (value > 0) {
+        parts.push(String(value));
+    }
+
+    return `${parts.join(" ")} 원`;
+}
+
+
+function updateMoneyGuide(input) {
+    const field =
+        input.closest(".field-group");
+
+    const guide =
+        field?.querySelector(
+            "[data-money-guide]"
+        );
+
+    if (!guide) return;
+
+    const amount =
+        Number(input.value || 0);
+
+    if (
+        !Number.isFinite(amount) ||
+        amount <= 0
+    ) {
+        guide.textContent = "";
+        return;
+    }
+
+    guide.textContent =
+        `${amount.toLocaleString("ko-KR")}원 · ` +
+        formatKoreanMoneyUnit(amount);
+}
+
+document.addEventListener(
+    "input",
+    (event) => {
+        const input =
+            event.target.closest(
+                ".amount-input-wrap input"
+            );
+
+        if (!input) return;
+
+        updateMoneyGuide(input);
+    }
+);
+
+document.addEventListener(
+    "focusin",
+    (event) => {
+        const input =
+            event.target.closest(
+                ".amount-input-wrap input"
+            );
+
+        if (!input) return;
+
+        updateMoneyGuide(input);
+    }
+);
+
+
+
+/* =====================================================
+   MOBILE IA · 가계부 / 분석
+===================================================== */
+
+function ensureMobileListPageSize() {
+    const filterForm =
+        document.querySelector("#filterForm");
+
+    if (!filterForm) return false;
+
+    const isMobile =
+        window.matchMedia(
+            "(max-width: 760px)"
+        ).matches;
+
+    if (!isMobile) return false;
+
+    const url =
+        new URL(window.location.href);
+
+    if (
+        url.searchParams.get("page_size") ===
+        "15"
+    ) {
+        return false;
+    }
+
+    url.searchParams.set(
+        "page_size",
+        "15"
+    );
+
+    window.location.replace(
+        url.toString()
+    );
+
+    return true;
+}
+
+
+function initMobileTabs() {
+    const tabLinks = [
+        ...document.querySelectorAll(
+            "[data-mobile-tab]"
+        ),
+    ];
+
+    if (!tabLinks.length) return;
+
+    const title =
+        document.querySelector(
+            "#mobileSectionTitle"
+        );
+
+    const mobileQuery =
+        window.matchMedia(
+            "(max-width: 760px)"
+        );
+
+
+    function currentViewFromHash() {
+        return (
+            window.location.hash === "#analysis"
+                ? "analysis"
+                : "ledger"
+        );
+    }
+
+
+    function updateTitle(view) {
+        if (!title) return;
+
+        if (!mobileQuery.matches) {
+            title.textContent =
+                title.dataset.defaultLabel ||
+                "나의 지출 살펴보기";
+
+            return;
+        }
+
+        title.textContent =
+            view === "analysis"
+                ? (
+                    title.dataset.analysisLabel ||
+                    "나의 지출 분석"
+                )
+                : (
+                    title.dataset.ledgerLabel ||
+                    "내 가계부"
+                );
+    }
+
+
+    function applyView(
+        view,
+        {
+            updateHistory = false,
+            scroll = false,
+        } = {}
+    ) {
+        if (!mobileQuery.matches) {
+            document.body.classList.remove(
+                "mobile-view-ledger",
+                "mobile-view-analysis"
+            );
+
+            tabLinks.forEach((link) => {
+                link.removeAttribute(
+                    "aria-current"
+                );
+            });
+
+            updateTitle(view);
+            return;
+        }
+
+        const safeView =
+            view === "analysis"
+                ? "analysis"
+                : "ledger";
+
+        document.body.classList.toggle(
+            "mobile-view-ledger",
+            safeView === "ledger"
+        );
+
+        document.body.classList.toggle(
+            "mobile-view-analysis",
+            safeView === "analysis"
+        );
+
+        tabLinks.forEach((link) => {
+            const isActive =
+                link.dataset.mobileTab ===
+                safeView;
+
+            if (isActive) {
+                link.setAttribute(
+                    "aria-current",
+                    "page"
+                );
+            } else {
+                link.removeAttribute(
+                    "aria-current"
+                );
+            }
+        });
+
+        updateTitle(safeView);
+
+        if (updateHistory) {
+            const url =
+                new URL(
+                    window.location.href
+                );
+
+            url.hash =
+                safeView === "analysis"
+                    ? "analysis"
+                    : "ledger";
+
+            history.replaceState(
+                null,
+                "",
+                url
+            );
+        }
+
+        if (scroll) {
+            document
+                .querySelector(
+                    safeView === "analysis"
+                        ? "#homeArea"
+                        : "#ledger"
+                )
+                ?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                });
+        }
+    }
+
+
+    tabLinks.forEach((link) => {
+        link.addEventListener(
+            "click",
+            (event) => {
+                if (!mobileQuery.matches) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                applyView(
+                    link.dataset.mobileTab,
+                    {
+                        updateHistory: true,
+                        scroll: true,
+                    }
+                );
+            }
+        );
+    });
+
+
+    window.addEventListener(
+        "hashchange",
+        () => {
+            applyView(
+                currentViewFromHash()
+            );
+        }
+    );
+
+
+    mobileQuery.addEventListener?.(
+        "change",
+        () => {
+            applyView(
+                currentViewFromHash()
+            );
+        }
+    );
+
+
+    applyView(
+        currentViewFromHash()
+    );
+}
+
+
+
+/* =====================================================
+   MOBILE UX · compact filters + progressive analysis
+===================================================== */
+
+document.addEventListener("click", (event) => {
+    const moreButton =
+        event.target.closest("[data-mobile-filter-more]");
+
+    if (moreButton) {
+        const dock =
+            moreButton.closest(".filter-dock");
+
+        if (!dock) return;
+
+        const isOpen =
+            dock.classList.toggle(
+                "is-mobile-tools-open"
+            );
+
+        moreButton.setAttribute(
+            "aria-expanded",
+            String(isOpen)
+        );
+
+        return;
+    }
+
+});
+
+
+/*
+ * viewport가 desktop으로 돌아가면
+ * mobile 전용 접힘 상태가 layout에 영향을 주지 않도록 정리합니다.
+ */
+window.addEventListener("resize", () => {
+    if (window.innerWidth > 760) {
+        document
+            .querySelectorAll(
+                ".filter-dock.is-mobile-tools-open"
+            )
+            .forEach((dock) => {
+                dock.classList.remove(
+                    "is-mobile-tools-open"
+                );
+
+                dock
+                    .querySelector(
+                        "[data-mobile-filter-more]"
+                    )
+                    ?.setAttribute(
+                        "aria-expanded",
+                        "false"
+                    );
+            });
+    }
 });
