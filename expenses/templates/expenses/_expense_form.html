@@ -1,0 +1,176 @@
+<form class="panel expense-form" method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="form-error-box">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="form-grid">
+            <div class="field-group">
+                <label class="field-label" for="formDateTrigger">날짜</label>
+                {{ form.date }}
+                <button
+                    type="button"
+                    class="form-date-trigger"
+                    id="formDateTrigger"
+                    data-form-date-trigger
+                    aria-haspopup="dialog"
+                >
+                    <span id="formDateText">
+                        {% if form.date.value %}
+                            {{ form.date.value }}
+                        {% else %}
+                            날짜를 선택해 주세요
+                        {% endif %}
+                    </span>
+                    <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="3.5" y="5" width="17" height="15" rx="3"></rect>
+                        <path d="M8 3.5V7M16 3.5V7M3.5 9.5h17"></path>
+                    </svg>
+                </button>
+                {% for error in form.date.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="categorySearch">카테고리</label>
+
+                {{ form.category }}
+
+                <div class="category-combobox" id="categoryCombobox">
+                    <div class="category-input-wrap">
+                        <input
+                            type="text"
+                            id="categorySearch"
+                            class="form-control category-search-input"
+                            placeholder="카테고리를 입력해 주세요"
+                            autocomplete="off"
+                            aria-autocomplete="list"
+                            aria-controls="categoryDropdown"
+                            aria-expanded="false"
+                        >
+
+                        <svg class="category-input-icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 10.5L12 14.5L16 10.5"></path>
+                        </svg>
+                    </div>
+
+                    <div
+                        class="category-dropdown"
+                        id="categoryDropdown"
+                        role="listbox"
+                        hidden
+                    >
+                        <div class="category-dropdown-label">카테고리</div>
+                        <div class="category-option-list" id="categoryOptionList">
+                            {% for category in form_categories %}
+                                <button
+                                    type="button"
+                                    class="category-option"
+                                    data-category-id="{{ category.id }}"
+                                    data-category-name="{{ category.name }}"
+                                    data-category-color="{{ category.color_key }}"
+                                    role="option"
+                                >
+                                    <span class="category-option-dot category-color-{{ category.color_key }}"></span>
+                                    <span>{{ category.name }}</span>
+                                </button>
+                            {% endfor %}
+                        </div>
+                        <button type="button" class="category-add-option" id="categoryAddOption" hidden>
+                            <span class="category-add-plus">+</span>
+                            <span id="categoryAddText"></span>
+                        </button>
+                        <div class="category-add-panel" id="categoryAddPanel" hidden>
+                            <div class="category-add-field">
+                                <label for="newCategoryName">카테고리명</label>
+                                <input type="text" id="newCategoryName" class="form-control" maxlength="30" autocomplete="off">
+                            </div>
+                            <div class="category-add-actions">
+                                <button type="button" class="secondary-button" id="cancelNewCategory"> 취소 </button>
+                                <button type="button" class="primary-button" id="saveNewCategory"> 추가 </button>
+                            </div>
+                        </div>
+                        <div id="categoryKeywordData" hidden>
+                            {% for item in category_keywords %}
+                                <span
+                                    data-keyword="{{ item.keyword }}"
+                                    data-category-id="{{ item.category.id }}"
+                                    data-category-name="{{ item.category.name }}"
+                                ></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                {% for error in form.category.errors %}
+                    <p class="field-error">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="field-group full">
+                <label class="field-label" for="descriptionDisplay">내용</label>
+                <input
+                    type="text"
+                    id="descriptionDisplay"
+                    class="form-control"
+                    placeholder="예: 점심"
+                    maxlength="80"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    value="{{ form.description.value|default:'' }}"
+                >
+
+                <input
+                    type="hidden"
+                    id="id_description"
+                    name="description"
+                    value="{{ form.description.value|default:'' }}"
+                >
+                {% for error in form.description.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+
+            <div class="field-group full">
+                <label class="field-label" for="{{ form.amount.id_for_label }}">금액</label>
+                <div class="amount-input-wrap">
+                    {{ form.amount }}
+                    <span>원</span>
+                </div>
+                <p
+                    class="money-input-guide"
+                    data-money-guide
+                    aria-live="polite"
+                ></p>
+                {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a class="secondary-button" href="{% url 'expense_list' %}">취소</a>
+            <button class="primary-button" type="submit">
+                {% if is_edit %}수정 저장{% else %}지출 등록{% endif %}
+            </button>
+        </div>
+    </form>
+</section>
+
+<div class="calendar-popover" id="formCalendarPopover" hidden>
+    <div class="calendar-card" role="dialog" aria-label="날짜 선택">
+        <div class="calendar-head">
+            <button type="button" class="calendar-nav" id="formPrevMonth" aria-label="이전 달">‹</button>
+            <strong id="formCalendarTitle"></strong>
+            <button type="button" class="calendar-nav" id="formNextMonth" aria-label="다음 달">›</button>
+        </div>
+
+        <div class="calendar-weekdays">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="calendar-grid" id="formCalendarGrid"></div>
+
+        <div class="calendar-footer">
+            <button type="button" class="secondary-button" id="formCalendarToday">오늘</button>
+            <button type="button" class="primary-button" id="formCalendarClose">확인</button>
+        </div>
+    </div>
+</div>

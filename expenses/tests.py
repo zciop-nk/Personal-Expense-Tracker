@@ -204,7 +204,7 @@ class LedgerTests(TestCase):
                     self.assertEqual(hashlib.sha256(content).hexdigest()[:12], match.group(1))
                     if match.group(2) == 'css':
                         self.assertIn(b'.home-overview{display:grid', content)
-                        self.assertIn(b'.header-nav{display:flex', content)
+                        self.assertIn(b'.site-header{', content)
                         self.assertIn(b'@media(max-width:760px)', content)
                         self.assertIn(b'.mobile-nav{position:fixed', content)
 
@@ -227,3 +227,9 @@ class LedgerTests(TestCase):
         self.assertContains(r, '“커피”')
         self.assertContains(r, '검색 결과 · 1건')
         self.assertContains(r, 'data-search-reset')
+    def test_design_system_page_is_available(self):
+        response = self.client.get('/design-system/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'SSEUM DESIGN SYSTEM')
+        self.assertContains(response, 'CSS Governance')
+

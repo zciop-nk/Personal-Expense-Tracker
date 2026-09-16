@@ -85,7 +85,7 @@
     <article class="panel mobile-ledger-only">
         <div class="section-heading expense-heading">
             <div>
-                <p class="eyebrow">EXPENSES</p>
+                
                 <h2>지출 내역</h2>
             </div>
             <span class="result-count">{{ stats.count }}건</span>
@@ -170,7 +170,7 @@
     <aside class="side-stack mobile-analysis-only" id="mobileAnalysisPanel" data-mobile-analysis>
         {% if dashboard_type == "A" %}
             <article class="panel dashboard-card">
-                <div class="section-heading"><div><p class="eyebrow">CATEGORY</p><h2>카테고리 구성</h2></div></div>
+                <div class="section-heading"><div><h2>카테고리 구성</h2></div></div>
                 {% if stats.category_share %}
                     {% include "expenses/_category_donut.html" with donut_center_label="총 지출" %}
                 {% else %}<p class="muted">표시할 데이터가 없어요.</p>{% endif %}
@@ -178,7 +178,7 @@
 
             <article class="panel dashboard-card">
                 <div class="section-heading trend-heading">
-                    <div><p class="eyebrow">MONTHLY</p><h2>월별 지출 추이</h2></div>
+                    <div><h2>월별 지출 추이</h2></div>
                     <div class="trend-meta"><span class="trend-year" data-adaptive-period-label></span><span class="trend-unit" data-adaptive-unit></span></div>
                 </div>
                 {% if stats.monthly_totals %}
@@ -199,7 +199,7 @@
 
         {% elif dashboard_type == "B" %}
             <article class="panel dashboard-card" data-description-donut data-color-key="{{ selected_category.color_key }}">
-                <div class="section-heading"><div><p class="eyebrow">BREAKDOWN</p><h2>내용별 지출 분석</h2></div></div>
+                <div class="section-heading"><div><h2>내용별 지출 분석</h2></div></div>
                 {% if stats.description_totals %}
                     <div class="description-donut-source" hidden>
                         {% for item in stats.description_totals %}<span data-description-segment data-name="{{ item.name }}" data-amount="{{ item.amount }}"></span>{% endfor %}
@@ -213,7 +213,7 @@
 
             <article class="panel dashboard-card comparison-trend-card">
                 <div class="section-heading trend-heading">
-                    <div><p class="eyebrow">{% if is_short_period %}DAILY{% else %}MONTHLY{% endif %}</p><h2>{{ selected_category.name }} 기간별 추이</h2></div>
+                    <div><h2>{{ selected_category.name }} 기간별 추이</h2></div>
                     <div class="trend-meta adaptive-trend-meta"><span class="trend-year" data-adaptive-period-label></span><span class="trend-unit" data-adaptive-unit></span></div>
                 </div>
                 {% if is_short_period and stats.daily_totals %}
@@ -233,7 +233,7 @@
 
         {% elif dashboard_type == "C" %}
             <article class="panel dashboard-card">
-                <div class="section-heading"><div><p class="eyebrow">CATEGORY</p><h2>기간 카테고리 구성</h2></div></div>
+                <div class="section-heading"><div><h2>기간 카테고리 구성</h2></div></div>
                 {% if stats.category_share %}
                     {% include "expenses/_category_donut.html" with donut_center_label="기간 총 지출" %}
                 {% else %}<p class="muted">표시할 데이터가 없어요.</p>{% endif %}
@@ -241,7 +241,7 @@
 
             <article class="panel dashboard-card">
                 <div class="section-heading trend-heading">
-                    <div><p class="eyebrow">DAILY</p><h2>일별 지출 추이</h2></div>
+                    <div><h2>일별 지출 추이</h2></div>
                     <div class="trend-meta adaptive-trend-meta"><span class="trend-year" data-adaptive-period-label></span><span class="trend-unit" data-adaptive-unit></span></div>
                 </div>
                 {% if stats.daily_totals %}
@@ -255,7 +255,7 @@
 
         {% elif dashboard_type == "D" %}
             <article class="panel dashboard-card">
-                <div class="section-heading"><div><p class="eyebrow">COMPARE</p><h2>카테고리 직접 비교</h2></div></div>
+                <div class="section-heading"><div><h2>카테고리 직접 비교</h2></div></div>
                 {% if comparison_rows %}
                     <div class="comparison-metrics">
                         {% for item in comparison_rows %}
@@ -272,7 +272,7 @@
 
             <article class="panel dashboard-card comparison-trend-card">
                 <div class="section-heading trend-heading">
-                    <div><p class="eyebrow">COMPARE TREND</p><h2>기간별 비교 추이</h2></div>
+                    <div><h2>기간별 비교 추이</h2></div>
                     <div class="trend-meta comparison-trend-meta"><span class="trend-year" data-comparison-period-label></span><span class="trend-unit" data-comparison-unit></span></div>
                 </div>
                 <div class="comparison-trend" data-comparison-trend data-granularity="{% if is_short_period %}day{% else %}month{% endif %}">

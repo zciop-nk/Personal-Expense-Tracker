@@ -18,7 +18,7 @@
             aria-live="polite"
         ></p>
         {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}</div>
-    <p class="budget-help">월을 바꾸면 해당 월에 저장된 예산을 불러와요.<br>홈에는 이번 달 예산이 표시돼요.</p>
+    <p class="budget-help">월을 바꾸면 해당 월에 저장된 예산을 불러와요.<br>선택한 월 요약에는 해당 월의 예산이 표시돼요.</p>
     <p class="field-error" data-budget-error role="alert" hidden></p>
     <div class="form-actions"><a href="{% url 'expense_list' %}" class="secondary-button" data-budget-close>취소</a><button type="submit" class="primary-button">예산 저장</button></div>
 </form>

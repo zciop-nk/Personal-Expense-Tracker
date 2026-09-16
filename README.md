@@ -429,3 +429,50 @@ python manage.py test
 ```
 
 씀은 기록 자체를 복잡하게 만들기보다, **가볍게 기록하고 필요할 때 소비 흐름을 확인하는 경험**에 초점을 두고 있습니다.
+
+## UI / Design System
+
+UI를 수정하기 전 아래 문서를 먼저 확인합니다.
+
+- `docs/DESIGN_SYSTEM.md` — 토큰, 컴포넌트, 접근성, CSS 운영 규칙
+- `docs/design-system.html` — 브라우저에서 바로 확인하는 시각형 문서
+- `docs/REFACTOR_NOTES.md` — 이번 리팩터링 적용 범위
+
+CSS/JS를 수정한 뒤에는 아래 명령으로 content hash asset을 다시 생성합니다.
+
+```bash
+python tools/version_static.py
+```
+
+같은 selector를 파일 아래에서 다시 덮어쓰는 방식은 사용하지 않고, 기존 정의를 직접 수정합니다.
+
+프론트 소스 구조를 수정한 경우에는 `ledger.js`를 직접 길게 수정하기보다 아래 source module을 수정합니다.
+
+- `expenses/static/expenses/js/src/ledger-core.js`
+- `expenses/static/expenses/js/src/ledger-filters.js`
+- `expenses/static/expenses/js/src/ledger-form.js`
+- `expenses/static/expenses/js/src/ledger-mobile.js`
+
+그 다음:
+
+```bash
+python tools/build_frontend.py
+```
+
+CSS 부채가 다시 늘어나는지 확인하려면 개발 의존성을 설치한 뒤:
+
+```bash
+pip install -r requirements-dev.txt
+python tools/audit_css.py
+```
+
+
+## 디자인 시스템 문서
+
+개발 서버 실행 후 아래 주소에서 시각형 디자인 시스템 문서를 확인할 수 있습니다.
+
+```text
+http://127.0.0.1:8000/design-system/
+```
+
+원본 문서는 `docs/design-system.html`, Django 템플릿은 `expenses/templates/expenses/design_system.html`에 있습니다.
